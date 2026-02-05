@@ -3,6 +3,7 @@ import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { connectRabbitMQ, closeRabbitMQ } from './messaging/rabbitmq.js';
 import { complaintsRouter } from './routes/complaints.routes.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
@@ -16,6 +17,9 @@ app.use('/complaints', complaintsRouter);
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Error handling middleware (must be last)
+app.use(errorHandler);
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string): Promise<void> => {
