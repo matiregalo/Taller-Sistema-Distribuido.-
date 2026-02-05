@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ValidationError } from '../services/complaints.service.js';
+import { ValidationError } from '../errors/validation.error.js';
 import { logger } from '../utils/logger.js';
 
 interface ErrorResponse {
@@ -7,9 +7,6 @@ interface ErrorResponse {
   details?: string;
 }
 
-/**
- * Global error handling middleware
- */
 export const errorHandler = (
   err: Error,
   _req: Request,
@@ -22,7 +19,6 @@ export const errorHandler = (
     stack: err.stack,
   });
 
-  // Handle validation errors
   if (err instanceof ValidationError) {
     const response: ErrorResponse = {
       error: 'Validation Error',
@@ -32,7 +28,6 @@ export const errorHandler = (
     return;
   }
 
-  // Handle JSON parse errors
   if (err instanceof SyntaxError && 'body' in err) {
     const response: ErrorResponse = {
       error: 'Invalid JSON',
@@ -42,7 +37,6 @@ export const errorHandler = (
     return;
   }
 
-  // Default: Internal server error
   const response: ErrorResponse = {
     error: 'Internal Server Error',
   };

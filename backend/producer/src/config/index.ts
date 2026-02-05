@@ -3,11 +3,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
-  // Server configuration
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
 
-  // RabbitMQ configuration
   rabbitmq: {
     url: process.env.RABBITMQ_URL || 'amqp://localhost:5672',
     exchange: process.env.RABBITMQ_EXCHANGE || 'complaints.exchange',

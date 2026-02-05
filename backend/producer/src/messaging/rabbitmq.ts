@@ -6,9 +6,6 @@ import { TicketEventPayload } from '../types/ticket.types.js';
 let connection: ChannelModel | null = null;
 let channel: Channel | null = null;
 
-/**
- * Connect to RabbitMQ and setup the exchange
- */
 export const connectRabbitMQ = async (): Promise<void> => {
   try {
     logger.info('Connecting to RabbitMQ...', { url: config.rabbitmq.url });
@@ -16,7 +13,6 @@ export const connectRabbitMQ = async (): Promise<void> => {
     connection = await amqp.connect(config.rabbitmq.url);
     channel = await connection.createChannel();
 
-    // Declare the exchange (direct type for routing)
     await channel.assertExchange(config.rabbitmq.exchange, 'direct', {
       durable: true,
     });
@@ -25,7 +21,6 @@ export const connectRabbitMQ = async (): Promise<void> => {
       exchange: config.rabbitmq.exchange,
     });
 
-    // Handle connection close
     connection.on('close', () => {
       logger.warn('RabbitMQ connection closed');
       connection = null;
@@ -42,9 +37,6 @@ export const connectRabbitMQ = async (): Promise<void> => {
   }
 };
 
-/**
- * Publish a ticket event to RabbitMQ
- */
 export const publishTicketEvent = async (payload: TicketEventPayload): Promise<boolean> => {
   if (!channel) {
     logger.error('Cannot publish: RabbitMQ channel not available');
@@ -86,9 +78,6 @@ export const publishTicketEvent = async (payload: TicketEventPayload): Promise<b
   }
 };
 
-/**
- * Close RabbitMQ connection gracefully
- */
 export const closeRabbitMQ = async (): Promise<void> => {
   try {
     if (channel) {

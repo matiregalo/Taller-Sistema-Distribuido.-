@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { complaintsRepository } from '../repositories/complaints.repository.js';
 import { publishTicketEvent } from '../messaging/rabbitmq.js';
 import { logger } from '../utils/logger.js';
+import { ValidationError } from '../errors/validation.error.js';
 import {
   Ticket,
   CreateTicketRequest,
@@ -9,19 +10,15 @@ import {
   IncidentType,
 } from '../types/ticket.types.js';
 
-/**
- * Validation error class for request validation
- */
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ValidationError';
-  }
-}
+const VALID_INCIDENT_TYPES: IncidentType[] = [
+  'NO_SERVICE',
+  'SLOW_CONNECTION',
+  'INTERMITTENT_SERVICE',
+  'OTHER',
+];
 
-/**
- * Validate the create ticket request
- */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const validateCreateRequest = (request: CreateTicketRequest): void => {
   if (!request.lineNumber || typeof request.lineNumber !== 'string') {
     throw new ValidationError('lineNumber is required and must be a string');
@@ -31,9 +28,7 @@ const validateCreateRequest = (request: CreateTicketRequest): void => {
     throw new ValidationError('email is required and must be a string');
   }
 
-  // Basic email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(request.email)) {
+  if (!EMAIL_REGEX.test(request.email)) {
     throw new ValidationError('email must be a valid email address');
   }
 
@@ -41,38 +36,21 @@ const validateCreateRequest = (request: CreateTicketRequest): void => {
     throw new ValidationError('incidentType is required and must be a string');
   }
 
-  const validIncidentTypes: IncidentType[] = [
-    'NO_SERVICE',
-    'SLOW_CONNECTION',
-    'INTERMITTENT_SERVICE',
-    'OTHER',
-  ];
-
-  if (!validIncidentTypes.includes(request.incidentType as IncidentType)) {
+  if (!VALID_INCIDENT_TYPES.includes(request.incidentType as IncidentType)) {
     throw new ValidationError(
-      `incidentType must be one of: ${validIncidentTypes.join(', ')}`
+      `incidentType must be one of: ${VALID_INCIDENT_TYPES.join(', ')}`
     );
   }
 
-  // Description is mandatory if incidentType is OTHER
-  if (request.incidentType === 'OTHER') {
-    if (!request.description || request.description.trim() === '') {
-      throw new ValidationError(
-        'description is required when incidentType is OTHER'
-      );
-    }
+  if (request.incidentType === 'OTHER' && (!request.description || request.description.trim() === '')) {
+    throw new ValidationError('description is required when incidentType is OTHER');
   }
 };
 
 export const complaintsService = {
-  /**
-   * Create a new ticket
-   */
   createTicket: async (request: CreateTicketRequest): Promise<Ticket> => {
-    // Validate request
     validateCreateRequest(request);
 
-    // Create ticket entity
     const ticket: Ticket = {
       ticketId: uuidv4(),
       lineNumber: request.lineNumber,
@@ -84,7 +62,6 @@ export const complaintsService = {
       createdAt: new Date(),
     };
 
-    // Persist ticket
     complaintsRepository.save(ticket);
 
     logger.info('Ticket created', {
@@ -92,7 +69,6 @@ export const complaintsService = {
       incidentType: ticket.incidentType,
     });
 
-    // Publish event to RabbitMQ
     const eventPayload: TicketEventPayload = {
       ticketId: ticket.ticketId,
       lineNumber: ticket.lineNumber,
@@ -106,9 +82,6 @@ export const complaintsService = {
     return ticket;
   },
 
-  /**
-   * Get a ticket by ID
-   */
   getTicketById: (ticketId: string): Ticket | undefined => {
     if (!ticketId || typeof ticketId !== 'string') {
       throw new ValidationError('ticketId is required and must be a string');

@@ -1,13 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { complaintsService, ValidationError } from '../services/complaints.service.js';
+import { complaintsService } from '../services/complaints.service.js';
 import { CreateTicketRequest } from '../types/ticket.types.js';
 import { logger } from '../utils/logger.js';
 
 export const complaintsController = {
-  /**
-   * POST /complaints
-   * Create a new complaint ticket
-   */
   createComplaint: async (
     req: Request,
     res: Response,
@@ -29,10 +25,6 @@ export const complaintsController = {
     }
   },
 
-  /**
-   * GET /complaints/:ticketId
-   * Get a complaint ticket by ID
-   */
   getComplaintById: (
     req: Request,
     res: Response,
