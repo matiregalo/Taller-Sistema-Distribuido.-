@@ -1,43 +1,43 @@
-# Producer Service
+# Servicio Producer
 
-Producer microservice for the ISP Incident Management System. Exposes an HTTP API to create and query support tickets, validates requests, persists data in-memory, and publishes events to RabbitMQ.
+Microservicio Producer para el Sistema de Gestión de Incidentes de un ISP. Expone una API HTTP para crear y consultar tickets de soporte, valida requests, persiste datos en memoria y publica eventos a RabbitMQ.
 
-## Prerequisites
+## Prerrequisitos
 
 - Node.js 20+
-- RabbitMQ running on `localhost:5672` (or configure via env vars)
+- RabbitMQ corriendo en `localhost:5672` (o configurar vía variables de entorno)
 
-## Installation
+## Instalación
 
 ```bash
 cd backend/producer
 npm install
 ```
 
-## Configuration
+## Configuración
 
-Copy `.env.example` to `.env` and adjust values:
+Copiá `.env.example` a `.env` y ajustá los valores:
 
 ```bash
 cp .env.example .env
 ```
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | 3000 | Server port |
-| `NODE_ENV` | development | Environment |
-| `RABBITMQ_URL` | amqp://localhost:5672 | RabbitMQ connection URL |
-| `RABBITMQ_EXCHANGE` | complaints.exchange | Exchange name |
+| Variable | Valor por Defecto | Descripción |
+|----------|-------------------|-------------|
+| `PORT` | 3000 | Puerto del servidor |
+| `NODE_ENV` | development | Ambiente |
+| `RABBITMQ_URL` | amqp://localhost:5672 | URL de conexión a RabbitMQ |
+| `RABBITMQ_EXCHANGE` | complaints.exchange | Nombre del exchange |
 | `RABBITMQ_ROUTING_KEY` | complaint.received | Routing key |
 
-## Running
+## Ejecución
 
-### Development
+### Desarrollo
 ```bash
 npm run dev
 ```
 
-### Production
+### Producción
 ```bash
 npm run build
 npm start
@@ -49,27 +49,27 @@ docker build -t producer-service .
 docker run -p 3000:3000 --env-file .env producer-service
 ```
 
-## API Endpoints
+## Endpoints de la API
 
-### Create Complaint
+### Crear Queja
 ```bash
 POST /complaints
 Content-Type: application/json
 
 {
   "lineNumber": "555-1234",
-  "email": "user@example.com",
+  "email": "usuario@ejemplo.com",
   "incidentType": "SLOW_CONNECTION",
-  "description": "Optional description"
+  "description": "Descripción opcional"
 }
 ```
 
-**Response (201):**
+**Respuesta (201):**
 ```json
 {
   "ticketId": "uuid",
   "lineNumber": "555-1234",
-  "email": "user@example.com",
+  "email": "usuario@ejemplo.com",
   "incidentType": "SLOW_CONNECTION",
   "description": null,
   "status": "RECEIVED",
@@ -78,7 +78,7 @@ Content-Type: application/json
 }
 ```
 
-### Get Complaint
+### Obtener Queja
 ```bash
 GET /complaints/:ticketId
 ```
@@ -88,16 +88,16 @@ GET /complaints/:ticketId
 GET /health
 ```
 
-## Incident Types
+## Tipos de Incidente
 
-- `NO_SERVICE`
-- `SLOW_CONNECTION`
-- `INTERMITTENT_SERVICE`
-- `OTHER` (requires description)
+- `NO_SERVICE` - Sin servicio
+- `SLOW_CONNECTION` - Conexión lenta
+- `INTERMITTENT_SERVICE` - Servicio intermitente
+- `OTHER` - Otro (requiere descripción)
 
-## RabbitMQ Event
+## Evento RabbitMQ
 
-Published to `complaints.exchange` with routing key `complaint.received`:
+Se publica al exchange `complaints.exchange` con routing key `complaint.received`:
 
 ```json
 {
