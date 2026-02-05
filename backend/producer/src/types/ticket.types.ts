@@ -2,11 +2,14 @@ export type TicketStatus = 'RECEIVED' | 'IN_PROGRESS' | 'RESOLVED';
 
 export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'PENDING';
 
-export type IncidentType = 
-  | 'NO_SERVICE'
-  | 'SLOW_CONNECTION'
-  | 'INTERMITTENT_SERVICE'
-  | 'OTHER';
+export enum IncidentType {
+  NO_SERVICE = 'NO_SERVICE',
+  INTERMITTENT_SERVICE = 'INTERMITTENT_SERVICE',
+  SLOW_CONNECTION = 'SLOW_CONNECTION',
+  ROUTER_ISSUE = 'ROUTER_ISSUE',
+  BILLING_QUESTION = 'BILLING_QUESTION',
+  OTHER = 'OTHER',
+}
 
 export interface Ticket {
   ticketId: string;

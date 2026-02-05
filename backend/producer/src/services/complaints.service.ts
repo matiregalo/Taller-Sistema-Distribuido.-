@@ -11,10 +11,12 @@ import {
 } from '../types/ticket.types.js';
 
 const VALID_INCIDENT_TYPES: IncidentType[] = [
-  'NO_SERVICE',
-  'SLOW_CONNECTION',
-  'INTERMITTENT_SERVICE',
-  'OTHER',
+  IncidentType.NO_SERVICE,
+  IncidentType.INTERMITTENT_SERVICE,
+  IncidentType.SLOW_CONNECTION,
+  IncidentType.ROUTER_ISSUE,
+  IncidentType.BILLING_QUESTION,
+  IncidentType.OTHER,
 ];
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,7 +44,7 @@ const validateCreateRequest = (request: CreateTicketRequest): void => {
     );
   }
 
-  if (request.incidentType === 'OTHER' && (!request.description || request.description.trim() === '')) {
+  if (request.incidentType === IncidentType.OTHER && (!request.description || request.description.trim() === '')) {
     throw new ValidationError('description is required when incidentType is OTHER');
   }
 };
