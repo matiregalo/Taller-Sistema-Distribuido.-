@@ -22,6 +22,68 @@ Sistema distribuido para la gestión de quejas de clientes de un proveedor de se
 | **Matias Regalo** | QA | Aseguramiento de calidad y pruebas |
 | **Cristian Renz** | Frontend | Interfaz de usuario en React |
 
+## 🔄 Flujo de Trabajo y Lógica del Sistema
+
+El sistema implementa una **arquitectura basada en eventos** que separa la recepción de datos de su procesamiento.  
+Este diseño garantiza que el sistema sea **resiliente, escalable** y capaz de manejar **picos de carga sin pérdida de información**.
+
+---
+
+## 1️⃣ Recepción y Validación (Producer API)
+
+- **Punto de entrada:**  
+  El microservicio **Producer** expone un endpoint REST para recibir los reclamos.
+
+- **Validación de integridad:**  
+  Se aplica un esquema de validación para asegurar que `lineNumber`, `email` e `incidentType` sean correctos.
+
+- **Respuesta inmediata:**  
+  Una vez validado, el sistema genera un **Ticket ID único** y responde al cliente con **HTTP 201 Created**.
+
+- **Delegación:**  
+  El ticket se publica inmediatamente en **RabbitMQ**, liberando los recursos de la API para atender nuevas solicitudes.
+
+---
+
+## 2️⃣ Gestión de Mensajería (Message Broker)
+
+- **Buffer de seguridad:**  
+  RabbitMQ actúa como intermediario desacoplando el Frontend del procesamiento pesado.
+
+- **Persistencia:**  
+  Si el volumen de reclamos excede la capacidad de procesamiento, la cola retiene los mensajes de forma segura.
+
+- **Garantía de entrega:**  
+  Los mensajes permanecen en el broker hasta que el **Consumer** confirma su procesamiento exitoso.
+
+---
+
+## 3️⃣ Procesamiento y Clasificación (Consumer Worker)
+
+- **Lógica de priorización:**  
+  El Consumer extrae los tickets de la cola y aplica una **matriz de decisión** para asignar una prioridad (**Alta, Media, Baja**) según el tipo de incidente  
+  (por ejemplo: `NO_SERVICE` tiene mayor prioridad que `BILLING_QUESTION`).
+
+- **Estado final:**  
+  El incidente se marca como **"En Progreso"** y queda preparado para su etapa de salida.
+
+---
+
+## 📈 Escalabilidad y Futuras Integraciones
+
+La arquitectura actual permite que el sistema crezca de forma orgánica:
+
+- **Escalado horizontal:**  
+  Se pueden desplegar múltiples instancias del **Consumer** para procesar la cola de RabbitMQ en paralelo, reduciendo tiempos de respuesta ante incidentes masivos.
+
+- **Persistencia en base de datos:**  
+  El flujo está preparado para que el siguiente paso del Consumer sea un **INSERT en una base de datos** (SQL o NoSQL) para auditoría y consultas históricas.
+
+- **Gestión administrativa:**  
+  Los tickets procesados y priorizados pueden derivarse automáticamente a un **Panel de Control**, permitiendo que un administrador o técnico humano actúe de forma inmediata.
+
+---
+
 ## 🚀 Inicio Rápido
 
 ### Requisitos
