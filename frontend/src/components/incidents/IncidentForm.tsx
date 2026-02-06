@@ -3,6 +3,7 @@ import type { FC } from 'react';
 import { IncidentType, IncidentTypeLabels } from '../../types/incident';
 import type { CreateIncidentRequest } from '../../types/incident';
 import { complaintsService } from '../../services/complaints.service';
+import SuccessModal from './SuccessModal';
 
 /**
  * IncidentForm refactorizado para React 19.
@@ -11,7 +12,7 @@ import { complaintsService } from '../../services/complaints.service';
  * Se utiliza 'useActionState' para gestionar el estado de la mutación y la carga.
  */
 const IncidentForm: FC = () => {
-    const [submitted, setSubmitted] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Acción para procesar el formulario (React 19 Actions)
@@ -27,7 +28,7 @@ const IncidentForm: FC = () => {
 
         try {
             await complaintsService.createComplaint(data);
-            setSubmitted(true);
+            setIsModalOpen(true);
             return { success: true };
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Error desconocido';
@@ -38,28 +39,14 @@ const IncidentForm: FC = () => {
 
     const [, formAction, isPending] = useActionState(submitAction, null);
 
-    if (submitted) {
-        return (
-            <div className="bg-white p-8 rounded-2xl shadow-xl shadow-indigo-100 border border-indigo-50 text-center animate-in fade-in zoom-in duration-500">
-                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Reporte Enviado!</h2>
-                <p className="text-gray-500 mb-6">Hemos recibido tu reporte de incidente. Un técnico revisará tu caso pronto.</p>
-                <button
-                    onClick={() => {
-                        setSubmitted(false);
-                        setError(null);
-                    }}
-                    className="text-indigo-600 font-medium hover:text-indigo-700 transition-colors"
-                >
-                    Enviar otro reporte
-                </button>
-            </div>
-        );
-    }
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setError(null);
+        // Opcional: Podríamos resetear el formulario aquí si fuera un componente controlado, 
+        // pero con Actions y Formdata, el navegador ya maneja gran parte del estado.
+        // Como estamos usando uncontrolled components, el form reset usualmente ocurre 
+        // tras el submit exitoso si no hay errores persistentes.
+    };
 
     return (
         <div className="bg-white p-8 rounded-2xl shadow-xl shadow-indigo-100 border border-indigo-50">
@@ -166,6 +153,8 @@ const IncidentForm: FC = () => {
                     )}
                 </button>
             </form>
+
+            <SuccessModal isOpen={isModalOpen} onClose={handleCloseModal} />
         </div>
     );
 };
