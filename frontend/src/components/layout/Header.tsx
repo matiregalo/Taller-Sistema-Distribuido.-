@@ -16,20 +16,7 @@ const Header: FC = () => {
                         </span>
                     </div>
 
-                    <nav className="hidden md:flex space-x-8">
-                        <a href="#" className="text-gray-600 hover:text-indigo-600 transition-colors font-medium">Dashboard</a>
-                        <a href="#" className="text-gray-600 hover:text-indigo-600 transition-colors font-medium">Incidentes</a>
-                        <a href="#" className="text-gray-600 hover:text-indigo-600 transition-colors font-medium">Soporte</a>
-                    </nav>
-
-                    <div className="flex items-center gap-4">
-                        <button className="px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors">
-                            Iniciar Sesión
-                        </button>
-                        <button className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full shadow-md shadow-indigo-200 transition-all active:scale-95">
-                            Reportar
-                        </button>
-                    </div>
+                    {/* Navegación y botones eliminados según requerimiento */}
                 </div>
             </div>
         </header>
