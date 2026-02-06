@@ -15,7 +15,7 @@ export const complaintsService = {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Error al enviar el reporte');
+                throw new Error(errorData.details || errorData.error || 'Error al enviar el reporte');
             }
 
             return await response.json();
