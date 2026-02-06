@@ -32,7 +32,7 @@ export interface CreateTicketRequest {
 export interface TicketEventPayload {
   ticketId: string;
   lineNumber: string;
-  incidentType: IncidentType;
+  type: IncidentType;
   description: string | null;
   createdAt: string;
 }

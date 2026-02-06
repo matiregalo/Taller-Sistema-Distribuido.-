@@ -74,7 +74,7 @@ export const complaintsService = {
     const eventPayload: TicketEventPayload = {
       ticketId: ticket.ticketId,
       lineNumber: ticket.lineNumber,
-      incidentType: ticket.incidentType,
+      type: ticket.incidentType,
       description: ticket.description,
       createdAt: ticket.createdAt.toISOString(),
     };
