@@ -12,11 +12,9 @@ const Header: FC = () => {
                             </svg>
                         </div>
                         <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">
-                            InciDocs
+                            Atlas Fiber
                         </span>
                     </div>
-
-                    {/* Navegación y botones eliminados según requerimiento */}
                 </div>
             </div>
         </header>
