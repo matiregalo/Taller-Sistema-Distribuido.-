@@ -2,7 +2,11 @@ import * as amqp from 'amqplib';
 import { Incident, IncidentType } from './types';
 import { determinePriority, determineStatus } from './processor';
 
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
+const RABBITMQ_URL = process.env.RABBITMQ_URL;
+if (!RABBITMQ_URL) {
+  console.error('RABBITMQ_URL environment variable is required');
+  process.exit(1);
+}
 const EXCHANGE_NAME = 'complaints.exchange';
 const QUEUE_NAME = 'complaints.queue';
 
