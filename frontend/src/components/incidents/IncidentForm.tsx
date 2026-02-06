@@ -27,6 +27,13 @@ const IncidentForm: FC = () => {
             description: formData.get('description') as string || undefined,
         };
 
+        // Validación cliente específica para 'OTHER'
+        if (data.incidentType === IncidentType.OTHER && (!data.description || data.description.trim() === '')) {
+            const message = 'La descripción es obligatoria cuando seleccionas "Otro"';
+            setError(message);
+            return { success: false, error: message };
+        }
+
         try {
             await complaintsService.createComplaint(data);
             setIsModalOpen(true);
