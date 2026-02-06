@@ -1,34 +1,42 @@
-import { useState } from 'react';
+import { useActionState, useState } from 'react';
+import type { FC } from 'react';
 import { IncidentType, IncidentTypeLabels } from '../../types/incident';
 import type { CreateIncidentRequest } from '../../types/incident';
+import { complaintsService } from '../../services/complaints.service';
 
-const IncidentForm: React.FC = () => {
-    const [formData, setFormData] = useState<CreateIncidentRequest>({
-        email: '',
-        lineNumber: '',
-        incidentType: IncidentType.OTHER,
-        description: '',
-    });
-
-    const [isSubmitting, setIsSubmitting] = useState(false);
+/**
+ * IncidentForm refactorizado para React 19.
+ * Se utiliza 'action' en lugar de 'onSubmit' (práctica moderna, aunque onSubmit no esté deprecado, 
+ * Actions son el nuevo estándar para mutaciones).
+ * Se utiliza 'useActionState' para gestionar el estado de la mutación y la carga.
+ */
+const IncidentForm: FC = () => {
     const [submitted, setSubmitted] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
+    // Acción para procesar el formulario (React 19 Actions)
+    const submitAction = async (_prevState: unknown, formData: FormData) => {
+        setError(null);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        const data: CreateIncidentRequest = {
+            email: formData.get('email') as string,
+            lineNumber: formData.get('lineNumber') as string,
+            incidentType: formData.get('incidentType') as IncidentType,
+            description: formData.get('description') as string || undefined,
+        };
 
-        console.log('Incident submitted:', formData);
-        setIsSubmitting(false);
-        setSubmitted(true);
+        try {
+            await complaintsService.createComplaint(data);
+            setSubmitted(true);
+            return { success: true };
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Error desconocido';
+            setError(message);
+            return { success: false, error: message };
+        }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value as IncidentType }));
-    };
+    const [, formAction, isPending] = useActionState(submitAction, null);
 
     if (submitted) {
         return (
@@ -41,7 +49,10 @@ const IncidentForm: React.FC = () => {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Reporte Enviado!</h2>
                 <p className="text-gray-500 mb-6">Hemos recibido tu reporte de incidente. Un técnico revisará tu caso pronto.</p>
                 <button
-                    onClick={() => setSubmitted(false)}
+                    onClick={() => {
+                        setSubmitted(false);
+                        setError(null);
+                    }}
                     className="text-indigo-600 font-medium hover:text-indigo-700 transition-colors"
                 >
                     Enviar otro reporte
@@ -57,7 +68,16 @@ const IncidentForm: React.FC = () => {
                 <p className="text-gray-500">Completa el formulario para que podamos ayudarte.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-center gap-3">
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {error}
+                </div>
+            )}
+
+            <form action={formAction} className="space-y-6">
                 <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                         Correo Electrónico
@@ -67,10 +87,9 @@ const IncidentForm: React.FC = () => {
                         id="email"
                         name="email"
                         required
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
                         placeholder="tu@email.com"
+                        disabled={isPending}
                     />
                 </div>
 
@@ -83,10 +102,9 @@ const IncidentForm: React.FC = () => {
                         id="lineNumber"
                         name="lineNumber"
                         required
-                        value={formData.lineNumber}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
                         placeholder="0123456789"
+                        disabled={isPending}
                     />
                 </div>
 
@@ -98,9 +116,9 @@ const IncidentForm: React.FC = () => {
                         id="incidentType"
                         name="incidentType"
                         required
-                        value={formData.incidentType}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none bg-no-repeat bg-[right_1rem_center] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')]"
+                        defaultValue={IncidentType.OTHER}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none bg-no-repeat bg-[right_1rem_center] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] disabled:bg-gray-50 disabled:text-gray-400"
+                        disabled={isPending}
                     >
                         {Object.entries(IncidentTypeLabels).map(([value, label]) => (
                             <option key={value} value={value}>
@@ -118,19 +136,18 @@ const IncidentForm: React.FC = () => {
                         id="description"
                         name="description"
                         rows={4}
-                        value={formData.description}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none disabled:bg-gray-50 disabled:text-gray-400"
                         placeholder="Cuéntanos un poco más sobre lo que sucede..."
+                        disabled={isPending}
                     />
                 </div>
 
                 <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isPending}
                     className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-bold rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                 >
-                    {isSubmitting ? (
+                    {isPending ? (
                         <>
                             <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
