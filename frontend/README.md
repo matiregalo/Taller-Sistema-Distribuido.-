@@ -31,12 +31,17 @@ La estructura sigue un patrón de **Clean Architecture** y modularidad:
    npm install
    ```
 
-2. Ejecutar en modo desarrollo:
+2. (Opcional) Configurar URL de la API. Por defecto usa `http://localhost:3000`. Crear `.env` local (no se sube al repo) con:
+   ```
+   VITE_API_URL=http://localhost:3000
+   ```
+
+3. Ejecutar en modo desarrollo:
    ```bash
    npm run dev
    ```
 
-3. Construir para producción:
+4. Construir para producción:
    ```bash
    npm run build
    ```

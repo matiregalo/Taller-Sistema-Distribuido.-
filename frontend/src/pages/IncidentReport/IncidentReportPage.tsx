@@ -2,11 +2,26 @@ import type { FC } from 'react';
 import Layout from '../../components/layout/Layout';
 import IncidentForm from '../../components/incidents/IncidentForm';
 
-const IncidentReportPage: FC = () => {
+interface IncidentReportPageProps {
+    onOpenStressTest?: () => void;
+}
+
+const IncidentReportPage: FC<IncidentReportPageProps> = ({ onOpenStressTest }) => {
     return (
         <Layout>
             <div className="bg-gradient-to-b from-indigo-50/50 to-white py-16 sm:py-24">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    {onOpenStressTest && (
+                        <div className="flex justify-end mb-2">
+                            <button
+                                type="button"
+                                onClick={onOpenStressTest}
+                                className="text-sm text-amber-600 hover:text-amber-800 font-medium"
+                            >
+                                ⚡ Pruebas de estrés
+                            </button>
+                        </div>
+                    )}
                     <div className="flex flex-col lg:flex-row gap-12 items-center">
                         {/* Left side: Content */}
                         <div className="lg:w-1/2 space-y-8 text-center lg:text-left">
