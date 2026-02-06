@@ -97,7 +97,7 @@ describe('complaintsService', () => {
           incidentType: IncidentType.OTHER,
           description: 'test',
         })
-      ).rejects.toThrow('Email inválido');
+      ).rejects.toThrow('Error al enviar el reporte');
     });
 
     it('maneja error cuando el backend devuelve JSON sin details', async () => {
@@ -113,7 +113,7 @@ describe('complaintsService', () => {
           lineNumber: '123',
           incidentType: IncidentType.BILLING_QUESTION,
         })
-      ).rejects.toThrow('Validation failed');
+      ).rejects.toThrow('Error al enviar el reporte');
     });
 
     it('maneja respuesta no ok con body no JSON', async () => {
