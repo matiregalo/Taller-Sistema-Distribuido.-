@@ -9,11 +9,11 @@ let channel: Channel | null = null;
 export const connectRabbitMQ = async (): Promise<void> => {
   try {
     logger.info('Connecting to RabbitMQ...', { url: config.rabbitmq.url });
-    
+
     connection = await amqp.connect(config.rabbitmq.url);
     channel = await connection.createChannel();
 
-    await channel.assertExchange(config.rabbitmq.exchange, 'direct', {
+    await channel.assertExchange(config.rabbitmq.exchange, 'topic', {
       durable: true,
     });
 
@@ -45,7 +45,7 @@ export const publishTicketEvent = async (payload: TicketEventPayload): Promise<b
 
   try {
     const message = Buffer.from(JSON.stringify(payload));
-    
+
     const published = channel.publish(
       config.rabbitmq.exchange,
       config.rabbitmq.routingKey,

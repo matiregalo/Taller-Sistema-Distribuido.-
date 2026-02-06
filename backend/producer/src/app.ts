@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { connectRabbitMQ, closeRabbitMQ } from './messaging/rabbitmq.js';
@@ -8,6 +9,7 @@ import { errorHandler } from './middlewares/errorHandler.js';
 const app = express();
 
 // Middleware
+app.use(cors());
 app.use(express.json());
 
 // Routes

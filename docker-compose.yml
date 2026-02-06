@@ -36,22 +36,22 @@ services:
     restart: unless-stopped
 
   # ============================================
-  # WORKER SERVICE
+  # WORKER SERVICE (Consumer)
   # ============================================
-  # worker:
-  #   build:
-  #     context: ./backend/worker
-  #     dockerfile: Dockerfile
-  #   image: worker-service
-  #   container_name: worker-service
-  #   env_file:
-  #     - ./backend/worker/.env
-  #   environment:
-  #     RABBITMQ_URL: amqp://rabbitmq:5672
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   restart: unless-stopped
+  consumer:
+    build:
+      context: ./backend/consumer
+      dockerfile: Dockerfile
+    image: consumer-service
+    container_name: consumer-service
+    env_file:
+      - ./backend/consumer/.env.example
+    environment:
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 
   # ============================================
   # FRONTEND
