@@ -13,6 +13,7 @@ import SuccessModal from './SuccessModal';
  */
 const IncidentForm: FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedType, setSelectedType] = useState<IncidentType>(IncidentType.OTHER);
     const [error, setError] = useState<string | null>(null);
 
     // Acción para procesar el formulario (React 19 Actions)
@@ -109,7 +110,8 @@ const IncidentForm: FC = () => {
                         id="incidentType"
                         name="incidentType"
                         required
-                        defaultValue={IncidentType.OTHER}
+                        value={selectedType}
+                        onChange={(e) => setSelectedType(e.target.value as IncidentType)}
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none bg-no-repeat bg-[right_1rem_center] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] disabled:bg-gray-50 disabled:text-gray-400"
                         disabled={isPending}
                     >
@@ -123,12 +125,13 @@ const IncidentForm: FC = () => {
 
                 <div>
                     <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                        Descripción <span className="text-gray-400 font-normal">(Opcional)</span>
+                        Descripción {selectedType !== IncidentType.OTHER && <span className="text-gray-400 font-normal">(Opcional)</span>}
                     </label>
                     <textarea
                         id="description"
                         name="description"
                         rows={4}
+                        required={selectedType === IncidentType.OTHER}
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none disabled:bg-gray-50 disabled:text-gray-400"
                         placeholder="Cuéntanos un poco más sobre lo que sucede..."
                         disabled={isPending}
