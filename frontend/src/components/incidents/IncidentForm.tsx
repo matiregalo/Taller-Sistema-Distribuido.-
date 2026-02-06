@@ -105,6 +105,12 @@ const IncidentForm: FC = () => {
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
                         placeholder="0123456789"
                         disabled={isPending}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        onInput={(e) => {
+                            const target = e.target as HTMLInputElement;
+                            target.value = target.value.replace(/[^0-9]/g, '');
+                        }}
                     />
                 </div>
 
