@@ -22,7 +22,7 @@ export enum IncidentStatus {
 export interface Incident {
   id: string;
   type: IncidentType;
-  description: string;
+  description?: string;
   priority?: Priority;
   status?: IncidentStatus;
   customerId: string;

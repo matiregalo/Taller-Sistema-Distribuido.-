@@ -28,13 +28,19 @@ const startConsumer = async () => {
           const content = JSON.parse(msg.content.toString());
           console.log('Mensaje recibido:', content);
 
-          if (!content.type || !content.description) {
-            console.warn('Estructura de mensaje inválida. Omitiendo lógica.');
+          if (!content.type) {
+            console.warn('Estructura de mensaje inválida: falta el tipo de incidente. Omitiendo lógica.');
             channel.ack(msg);
             return;
           }
 
           const incidentType = content.type as IncidentType;
+
+          if (incidentType === IncidentType.OTHER && !content.description) {
+             console.warn('Estructura de mensaje inválida: se requiere descripción para el tipo OTHER. Omitiendo lógica.');
+             channel.ack(msg);
+             return;
+          }
           
           const priority = determinePriority(incidentType);
           const status = determineStatus(priority);
