@@ -12,7 +12,7 @@ const Footer: FC = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
                             </div>
-                            <span className="text-xl font-bold text-gray-900">InciDocs</span>
+                            <span className="text-xl font-bold text-gray-900">Atlas Fiber</span>
                         </div>
                         <p className="text-gray-500 max-w-xs">
                             Plataforma robusta para la gestión y seguimiento de incidentes técnicos en tiempo real.
@@ -40,7 +40,7 @@ const Footer: FC = () => {
 
                 <div className="mt-12 pt-8 border-t border-gray-200">
                     <p className="text-center text-gray-400 text-sm">
-                        © {new Date().getFullYear()} InciDocs Inc. Todos los derechos reservados.
+                        © {new Date().getFullYear()} Atlas Fiber Inc. Todos los derechos reservados.
                     </p>
                 </div>
             </div>
