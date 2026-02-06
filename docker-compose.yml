@@ -56,14 +56,14 @@ services:
   # ============================================
   # FRONTEND
   # ============================================
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   image: frontend-service
-  #   container_name: frontend-service
-  #   ports:
-  #     - "80:80"
-  #   depends_on:
-  #     - producer
-  #   restart: unless-stopped
+  frontend:
+     build:
+       context: ./frontend
+       dockerfile: Dockerfile
+     image: frontend-service
+     container_name: frontend-service
+     ports:
+       - "80:80"
+     depends_on:
+       - producer
+     restart: unless-stopped
