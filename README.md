@@ -111,6 +111,25 @@ npm run dev
 
 Cada servicio tiene un archivo `.env.example` con las variables necesarias. Copiar a `.env` y ajustar según el ambiente.
 
+## 📊 Monitoreo
+
+### Logs (Docker)
+```bash
+docker-compose logs -f producer   # API
+docker-compose logs -f consumer   # Worker
+docker-compose logs -f rabbitmq   # Broker
+```
+
+### Panel RabbitMQ
+Acceda a http://localhost:15672 (`guest/guest`) para ver exchanges, colas y tasas de mensajes.
+
+### Prueba rápida
+```bash
+curl -X POST http://localhost:3000/complaints \
+  -H "Content-Type: application/json" \
+  -d '{"lineNumber": "123456", "email": "test@ejemplo.com", "incidentType": "NO_SERVICE", "description": "Prueba"}'
+```
+
 ---
 
 > **Nota:** Este es un proyecto de estudio desarrollado como parte de un taller académico.
