@@ -106,3 +106,10 @@ del aplicativo. Todas las implementaciones deben respetar este protocolo de
 interacción con la IA y quedar reflejadas en el código y la documentación del
 repositorio.
 
+---
+
+## 6. Puerta de Calidad:
+
+Solicitar a la IA una revisión técnica integral (antes de cada commit) que verifique el cumplimiento de los principios SOLID y Clean Code, la correcta implementación de patrones de diseño y la ausencia de code smells. Asimismo, ejecutar scripts de prueba para verificar el funcionamiento del sistema completo, incluyendo los componentes service, producer, broker, consumer y frontend.
+
+
