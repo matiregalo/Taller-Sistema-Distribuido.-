@@ -1,5 +1,5 @@
 import { IncidentType, Priority, IncidentStatus } from './types';
-import { PriorityResolver } from './strategies/PriorityResolver';
+import { PriorityResolver } from './strategies';
 
 // Single PriorityResolver instance (can be injected for tests)
 const resolver = new PriorityResolver();
