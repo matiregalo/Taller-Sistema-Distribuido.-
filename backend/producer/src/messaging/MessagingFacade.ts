@@ -5,6 +5,7 @@ import type { IMessagingFacade } from './IMessagingFacade.js';
 import type { ILogger } from '../utils/ILogger.js';
 import { MessagingError } from '../errors/messaging.error.js';
 import { logger as defaultLogger } from '../utils/logger.js';
+import { metrics } from '../utils/metrics.js';
 
 export class MessagingFacade implements IMessagingFacade {
     constructor(
@@ -18,6 +19,7 @@ export class MessagingFacade implements IMessagingFacade {
         const channel = this.connectionManager.getChannel();
 
         if (!channel) {
+            metrics.incrementPublishErrors();
             throw new MessagingError(
                 'Canal de mensajería no disponible',
                 ticket.ticketId
@@ -34,12 +36,14 @@ export class MessagingFacade implements IMessagingFacade {
         );
 
         if (!published) {
+            metrics.incrementPublishErrors();
             throw new MessagingError(
                 'Mensaje no confirmado por el broker',
                 ticket.ticketId
             );
         }
 
+        metrics.incrementPublished();
         this.logger.info('Ticket event published', { ticketId: ticket.ticketId });
     }
 }

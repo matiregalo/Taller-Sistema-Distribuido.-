@@ -6,6 +6,7 @@ import { RabbitMQConnectionManager } from './messaging/RabbitMQConnectionManager
 import { complaintsRouter } from './routes/complaints.routes.js';
 import { errorHandlerChain } from './middlewares/errorHandler.js';
 import { registerGracefulShutdown } from './lifecycle/gracefulShutdown.js';
+import { metrics } from './utils/metrics.js';
 
 const app = express();
 
@@ -35,9 +36,13 @@ app.use(express.json());
 // Routes
 app.use('/complaints', complaintsRouter);
 
-// Health check endpoint
+// Health check endpoint (§5.2)
 app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    metrics: metrics.getSnapshot(),
+  });
 });
 
 // Error handling middleware (must be last)

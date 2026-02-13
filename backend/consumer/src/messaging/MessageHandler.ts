@@ -5,6 +5,7 @@ import { determinePriority, determineStatus } from '../processor';
 import { logger as defaultLogger } from '../utils/logger';
 import type { ILogger } from '../utils/ILogger';
 import type { IIncidentRepository } from '../repositories/IIncidentRepository';
+import { metrics } from '../utils/metrics';
 
 export class MessageHandler {
     private static readonly MAX_RETRIES = 3;
@@ -44,6 +45,7 @@ export class MessageHandler {
                     correlationId,
                 });
                 // Send to DLQ — unparseable/invalid structure
+                metrics.incrementRejected();
                 this.channel.nack(msg, false, false);
                 return;
             }
@@ -55,6 +57,7 @@ export class MessageHandler {
                     ticketId: content.ticketId,
                     correlationId,
                 });
+                metrics.incrementRejected();
                 this.channel.nack(msg, false, false);
                 return;
             }
@@ -83,6 +86,7 @@ export class MessageHandler {
                 correlationId,
             });
 
+            metrics.incrementProcessed();
             this.channel.ack(msg);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -96,6 +100,7 @@ export class MessageHandler {
                     maxRetries: MessageHandler.MAX_RETRIES,
                 });
                 // Requeue with incremented retry header
+                metrics.incrementRetried();
                 this.channel.nack(msg, false, true);
             } else {
                 this.logger.error('Max retries exceeded, sending to DLQ', {
@@ -104,6 +109,7 @@ export class MessageHandler {
                     retryCount,
                 });
                 // Send to DLQ — exhausted retries
+                metrics.incrementRejected();
                 this.channel.nack(msg, false, false);
             }
         }
