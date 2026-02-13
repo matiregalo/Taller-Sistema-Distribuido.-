@@ -3,6 +3,7 @@ import { MessageHandler } from './messaging/MessageHandler';
 import { InMemoryIncidentRepository } from './repositories/InMemoryIncidentRepository';
 import { ExponentialBackoff } from './utils/ExponentialBackoff';
 import { startHealthServer } from './lifecycle/healthServer';
+import { registerGracefulShutdown } from './lifecycle/gracefulShutdown';
 import { logger } from './utils/logger';
 
 const connectionManager = RabbitMQConnectionManager.getInstance();
@@ -33,20 +34,11 @@ const startConsumer = async () => {
   }
 };
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  logger.info('Received SIGTERM. Shutting down...');
-  await connectionManager.close();
-  process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  logger.info('Received SIGINT. Shutting down...');
-  await connectionManager.close();
-  process.exit(0);
-});
+// Graceful shutdown (extracted to lifecycle module — SRP §3.1)
+registerGracefulShutdown(connectionManager);
 
 // Start health-check server (§5.2)
 startHealthServer(connectionManager);
 
 startConsumer();
+
