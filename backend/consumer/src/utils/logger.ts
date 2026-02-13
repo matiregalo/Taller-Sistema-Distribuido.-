@@ -1,3 +1,5 @@
+import type { ILogger } from './ILogger';
+
 type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 
 const formatMessage = (
@@ -10,7 +12,7 @@ const formatMessage = (
     return `[${timestamp}] [${level}] ${message}${ctx}`;
 };
 
-export const logger = {
+export const logger: ILogger = {
     info: (message: string, context?: Record<string, unknown>): void => {
         console.log(formatMessage('INFO', message, context));
     },

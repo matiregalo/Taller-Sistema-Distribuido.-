@@ -2,14 +2,16 @@ import type { Ticket } from '../types/ticket.types.js';
 import type { IConnectionManager } from './IConnectionManager.js';
 import type { IMessageSerializer } from './IMessageSerializer.js';
 import type { IMessagingFacade } from './IMessagingFacade.js';
+import type { ILogger } from '../utils/ILogger.js';
 import { MessagingError } from '../errors/messaging.error.js';
-import { logger } from '../utils/logger.js';
+import { logger as defaultLogger } from '../utils/logger.js';
 
 export class MessagingFacade implements IMessagingFacade {
     constructor(
         private readonly connectionManager: IConnectionManager,
         private readonly serializer: IMessageSerializer,
-        private readonly config: { exchange: string; routingKey: string }
+        private readonly config: { exchange: string; routingKey: string },
+        private readonly logger: ILogger = defaultLogger
     ) { }
 
     async publishTicketCreated(ticket: Ticket): Promise<void> {
@@ -38,6 +40,6 @@ export class MessagingFacade implements IMessagingFacade {
             );
         }
 
-        logger.info('Ticket event published', { ticketId: ticket.ticketId });
+        this.logger.info('Ticket event published', { ticketId: ticket.ticketId });
     }
 }

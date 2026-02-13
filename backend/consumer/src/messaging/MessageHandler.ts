@@ -1,13 +1,15 @@
 import { Channel, ConsumeMessage } from 'amqplib';
 import { IncidentType, Incident } from '../types';
 import { determinePriority, determineStatus } from '../processor';
-import { logger } from '../utils/logger';
+import { logger as defaultLogger } from '../utils/logger';
+import type { ILogger } from '../utils/ILogger';
 import type { IIncidentRepository } from '../repositories/IIncidentRepository';
 
 export class MessageHandler {
     constructor(
         private readonly channel: Channel,
-        private readonly repository: IIncidentRepository
+        private readonly repository: IIncidentRepository,
+        private readonly logger: ILogger = defaultLogger
     ) { }
 
     async handle(msg: ConsumeMessage | null): Promise<void> {
@@ -19,10 +21,10 @@ export class MessageHandler {
 
         try {
             const content = JSON.parse(msg.content.toString());
-            logger.info('Message received', { ticketId: content.ticketId, correlationId });
+            this.logger.info('Message received', { ticketId: content.ticketId, correlationId });
 
             if (!content.type) {
-                logger.warn('Invalid message structure: missing incident type', {
+                this.logger.warn('Invalid message structure: missing incident type', {
                     ticketId: content.ticketId,
                     correlationId,
                 });
@@ -34,7 +36,7 @@ export class MessageHandler {
             const incidentType = content.type as IncidentType;
 
             if (incidentType === IncidentType.OTHER && !content.description) {
-                logger.warn('Invalid message: description required for OTHER type', {
+                this.logger.warn('Invalid message: description required for OTHER type', {
                     ticketId: content.ticketId,
                     correlationId,
                 });
@@ -59,7 +61,7 @@ export class MessageHandler {
             // Persist in Consumer repository (§2.2 decision)
             this.repository.save(processedIncident);
 
-            logger.info('Incident processed and persisted', {
+            this.logger.info('Incident processed and persisted', {
                 ticketId: processedIncident.ticketId,
                 priority: processedIncident.priority,
                 status: processedIncident.status,
@@ -69,7 +71,7 @@ export class MessageHandler {
             this.channel.ack(msg);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            logger.error('Error processing message', { error: errorMessage, correlationId });
+            this.logger.error('Error processing message', { error: errorMessage, correlationId });
             // Unparseable JSON → DLQ
             this.channel.nack(msg, false, false);
         }
