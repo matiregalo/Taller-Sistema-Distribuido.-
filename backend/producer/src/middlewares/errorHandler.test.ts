@@ -49,7 +49,7 @@ describe('Error Handler Chain', () => {
     it('maneja SyntaxError de JSON con status 400', () => {
       const res = createMockResponse();
       const error = new SyntaxError('Unexpected token');
-      (error as Record<string, unknown>).body = 'invalid json';
+      (error as unknown as Record<string, unknown>).body = 'invalid json';
       jsonSyntaxErrorHandler(error, mockRequest, res, mockNext);
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({

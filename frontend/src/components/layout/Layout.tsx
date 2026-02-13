@@ -4,16 +4,17 @@ import Footer from './Footer';
 
 interface LayoutProps {
     children: ReactNode;
+    onOpenStressTest?: () => void;
 }
 
-const Layout: FC<LayoutProps> = ({ children }) => {
+const Layout: FC<LayoutProps> = ({ children, onOpenStressTest }) => {
     return (
         <div className="min-h-screen flex flex-col pt-16">
             <Header />
             <main className="flex-grow">
                 {children}
             </main>
-            <Footer />
+            <Footer onOpenStressTest={onOpenStressTest} />
         </div>
     );
 };
