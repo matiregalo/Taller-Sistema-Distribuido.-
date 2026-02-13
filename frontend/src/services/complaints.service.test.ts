@@ -134,36 +134,4 @@ describe('complaintsService', () => {
       ).rejects.toThrow('Error al enviar el reporte');
     });
   });
-
-  describe('getComplaint', () => {
-    it('hace GET a /complaints/{ticketId} y devuelve el ticket', async () => {
-      const mockFetch = vi.mocked(fetch);
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          ticketId: 'abc-123',
-          status: 'IN_PROGRESS',
-          priority: 'HIGH',
-        }),
-      } as unknown as Response);
-
-      const result = await complaintsService.getComplaint('abc-123');
-
-      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/complaints/abc-123'));
-      expect(result).toEqual({
-        ticketId: 'abc-123',
-        status: 'IN_PROGRESS',
-        priority: 'HIGH',
-      });
-    });
-
-    it('lanza error cuando el ticket no existe', async () => {
-      const mockFetch = vi.mocked(fetch);
-      mockFetch.mockResolvedValueOnce({ ok: false } as unknown as Response);
-
-      await expect(complaintsService.getComplaint('inexistente')).rejects.toThrow(
-        'No se pudo encontrar el reporte'
-      );
-    });
-  });
 });

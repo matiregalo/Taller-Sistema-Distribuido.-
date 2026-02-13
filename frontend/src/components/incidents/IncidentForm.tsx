@@ -1,25 +1,27 @@
-import { useActionState, useState } from 'react';
+import { useActionState } from 'react';
 import type { FC } from 'react';
 import { IncidentType, IncidentTypeLabels } from '../../types/incident';
 import type { CreateIncidentRequest } from '../../types/incident';
-import { complaintsService } from '../../services/complaints.service';
-import SuccessModal from './SuccessModal';
+import { useIncidentForm } from '../../hooks/useIncidentForm';
+import SuccessModal from '../modal/SuccessModal';
 
 /**
  * IncidentForm refactorizado para React 19.
- * Se utiliza 'action' en lugar de 'onSubmit' (práctica moderna, aunque onSubmit no esté deprecado, 
- * Actions son el nuevo estándar para mutaciones).
- * Se utiliza 'useActionState' para gestionar el estado de la mutación y la carga.
+ * Utiliza 'useIncidentForm' hook para separar lógica de estado y API del render.
+ * Utiliza 'useActionState' para gestionar el estado de la mutación y la carga.
  */
 const IncidentForm: FC = () => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedType, setSelectedType] = useState<IncidentType>(IncidentType.OTHER);
-    const [error, setError] = useState<string | null>(null);
+    const {
+        selectedType,
+        setSelectedType,
+        error,
+        isModalOpen,
+        closeModal,
+        submitIncident,
+    } = useIncidentForm(IncidentType.OTHER);
 
-    // Acción para procesar el formulario (React 19 Actions)
+    // Action wrapper for React 19 form actions
     const submitAction = async (_prevState: unknown, formData: FormData) => {
-        setError(null);
-
         const data: CreateIncidentRequest = {
             email: formData.get('email') as string,
             lineNumber: formData.get('lineNumber') as string,
@@ -27,34 +29,10 @@ const IncidentForm: FC = () => {
             description: formData.get('description') as string || undefined,
         };
 
-        // Validación cliente específica para 'OTHER'
-        if (data.incidentType === IncidentType.OTHER && (!data.description || data.description.trim() === '')) {
-            const message = 'La descripción es obligatoria cuando seleccionas "Otro"';
-            setError(message);
-            return { success: false, error: message };
-        }
-
-        try {
-            await complaintsService.createComplaint(data);
-            setIsModalOpen(true);
-            return { success: true };
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Error desconocido';
-            setError(message);
-            return { success: false, error: message };
-        }
+        return submitIncident(data);
     };
 
     const [, formAction, isPending] = useActionState(submitAction, null);
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setError(null);
-        // Opcional: Podríamos resetear el formulario aquí si fuera un componente controlado, 
-        // pero con Actions y Formdata, el navegador ya maneja gran parte del estado.
-        // Como estamos usando uncontrolled components, el form reset usualmente ocurre 
-        // tras el submit exitoso si no hay errores persistentes.
-    };
 
     return (
         <div className="bg-white p-8 rounded-2xl shadow-xl shadow-indigo-100 border border-indigo-50">
@@ -164,7 +142,7 @@ const IncidentForm: FC = () => {
                 </button>
             </form>
 
-            <SuccessModal isOpen={isModalOpen} onClose={handleCloseModal} />
+            <SuccessModal isOpen={isModalOpen} onClose={closeModal} />
         </div>
     );
 };

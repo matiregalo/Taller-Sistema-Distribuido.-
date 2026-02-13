@@ -21,18 +21,10 @@ export interface TicketResponse {
  */
 export const complaintsService = {
   /**
-   * Creates a new complaint.
+   * Creates a new complaint (publishes event via Producer).
    * @throws Error if the request fails
    */
   createComplaint: async (data: CreateIncidentRequest): Promise<TicketResponse> => {
     return httpClient.post<CreateIncidentRequest, TicketResponse>('/complaints', data);
-  },
-
-  /**
-   * Gets a complaint by ticket ID.
-   * @throws Error if the ticket is not found
-   */
-  getComplaint: async (ticketId: string): Promise<TicketResponse> => {
-    return httpClient.get<TicketResponse>(`/complaints/${ticketId}`);
   },
 };
