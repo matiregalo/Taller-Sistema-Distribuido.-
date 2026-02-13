@@ -67,20 +67,20 @@ describe('complaintsService', () => {
       expect(body.incidentType).toBe('ROUTER_ISSUE');
     });
 
-    it('devuelve la respuesta del API (ticketId y status)', async () => {
+    it('completa sin error cuando la respuesta es ok', async () => {
       const mockFetch = vi.mocked(fetch);
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ ticketId: 'ticket-1', status: 'RECEIVED' }),
       } as unknown as Response);
 
-      const result = await complaintsService.createComplaint({
-        email: 'x@y.com',
-        lineNumber: '099111222',
-        incidentType: IncidentType.SLOW_CONNECTION,
-      });
-
-      expect(result).toEqual({ ticketId: 'ticket-1', status: 'RECEIVED' });
+      await expect(
+        complaintsService.createComplaint({
+          email: 'x@y.com',
+          lineNumber: '099111222',
+          incidentType: IncidentType.SLOW_CONNECTION,
+        })
+      ).resolves.toBeUndefined();
     });
 
     it('lanza error con mensaje del backend cuando la respuesta no es ok', async () => {
