@@ -2,6 +2,7 @@ import { RabbitMQConnectionManager } from './messaging/RabbitMQConnectionManager
 import { MessageHandler } from './messaging/MessageHandler';
 import { InMemoryIncidentRepository } from './repositories/InMemoryIncidentRepository';
 import { ExponentialBackoff } from './utils/ExponentialBackoff';
+import { startHealthServer } from './lifecycle/healthServer';
 import { logger } from './utils/logger';
 
 const connectionManager = RabbitMQConnectionManager.getInstance();
@@ -44,5 +45,8 @@ process.on('SIGINT', async () => {
   await connectionManager.close();
   process.exit(0);
 });
+
+// Start health-check server (§5.2)
+startHealthServer(connectionManager);
 
 startConsumer();
