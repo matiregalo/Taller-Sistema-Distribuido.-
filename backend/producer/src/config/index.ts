@@ -14,13 +14,3 @@ export const rabbitmqConfig = {
   exchange: process.env.RABBITMQ_EXCHANGE || 'complaints.exchange',
   routingKey: process.env.RABBITMQ_ROUTING_KEY || 'complaint.received',
 } as const;
-
-// Aggregate for backward compatibility
-export const config = {
-  ...serverConfig,
-  rabbitmq: rabbitmqConfig,
-} as const;
-
-export type ServerConfig = typeof serverConfig;
-export type RabbitMQConfig = typeof rabbitmqConfig;
-export type Config = typeof config;

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IncidentType } from '../types/ticket.types.js';
-import { ValidationError } from '../errors/validation.error.js';
 import type { IMessagingFacade } from '../messaging/IMessagingFacade.js';
 import { createComplaintsService } from './complaints.service.js';
 
@@ -56,69 +55,19 @@ describe('complaintsService', () => {
       expect(mockMessaging.publishTicketCreated).toHaveBeenCalledTimes(1);
     });
 
-    it('rechaza request sin lineNumber', async () => {
-      await expect(
-        complaintsService.createTicket({
-          ...validRequest,
-          lineNumber: '',
-        } as typeof validRequest)
-      ).rejects.toThrow(ValidationError);
-      await expect(
-        complaintsService.createTicket({
-          ...validRequest,
-          lineNumber: undefined as unknown as string,
-        })
-      ).rejects.toThrow(/lineNumber/);
+    // Validation tests moved to validateComplaintRequest.test.ts (SRP §3.1)
+
+    it('asigna description null cuando no se provee', async () => {
+      const ticket = await complaintsService.createTicket(validRequest);
+      expect(ticket.description).toBeNull();
     });
 
-    it('rechaza request sin email válido', async () => {
-      await expect(
-        complaintsService.createTicket({
-          ...validRequest,
-          email: 'invalid',
-        })
-      ).rejects.toThrow(ValidationError);
-      await expect(
-        complaintsService.createTicket({
-          ...validRequest,
-          email: '',
-        } as typeof validRequest)
-      ).rejects.toThrow(/email/);
-    });
-
-    it('rechaza request sin incidentType válido', async () => {
-      await expect(
-        complaintsService.createTicket({
-          ...validRequest,
-          incidentType: 'INVALID_TYPE' as IncidentType,
-        })
-      ).rejects.toThrow(/incidentType/);
-    });
-
-    it('exige description cuando incidentType es OTHER', async () => {
-      await expect(
-        complaintsService.createTicket({
-          ...validRequest,
-          incidentType: IncidentType.OTHER,
-          description: '',
-        })
-      ).rejects.toThrow(/description.*OTHER/);
-
-      await expect(
-        complaintsService.createTicket({
-          ...validRequest,
-          incidentType: IncidentType.OTHER,
-        })
-      ).rejects.toThrow(/description/);
-
-      const withDesc = await complaintsService.createTicket({
+    it('preserva description cuando se provee', async () => {
+      const ticket = await complaintsService.createTicket({
         ...validRequest,
-        incidentType: IncidentType.OTHER,
-        description: 'Detalle del otro tipo',
+        description: 'Test description',
       });
-      expect(withDesc.ticketId).toBeDefined();
-      expect(withDesc.status).toBe('RECEIVED');
-      expect(withDesc.priority).toBe('PENDING');
+      expect(ticket.description).toBe('Test description');
     });
   });
 });

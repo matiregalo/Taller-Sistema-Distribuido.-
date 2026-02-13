@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../config/index.js', () => ({
-  config: { nodeEnv: 'test' },
+  serverConfig: { nodeEnv: 'test' },
 }));
 
 describe('logger', () => {
@@ -61,7 +61,7 @@ describe('logger', () => {
 describe('logger (development)', () => {
   it('debug llama console.debug cuando nodeEnv es development', async () => {
     vi.resetModules();
-    vi.doMock('../config/index.js', () => ({ config: { nodeEnv: 'development' as const } }));
+    vi.doMock('../config/index.js', () => ({ serverConfig: { nodeEnv: 'development' as const } }));
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
     const { logger } = await import('./logger.js');
     logger.debug('dev message', { foo: 'bar' });
