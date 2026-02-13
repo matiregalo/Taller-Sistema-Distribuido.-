@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger.js';
-import { ValidationError } from '../errors/validation.error.js';
 import { RabbitMQConnectionManager } from '../messaging/RabbitMQConnectionManager.js';
 import { TicketMessageSerializer } from '../messaging/TicketMessageSerializer.js';
 import { MessagingFacade } from '../messaging/MessagingFacade.js';
@@ -12,50 +11,11 @@ import {
   IncidentType,
 } from '../types/ticket.types.js';
 
-const VALID_INCIDENT_TYPES: IncidentType[] = [
-  IncidentType.NO_SERVICE,
-  IncidentType.INTERMITTENT_SERVICE,
-  IncidentType.SLOW_CONNECTION,
-  IncidentType.ROUTER_ISSUE,
-  IncidentType.BILLING_QUESTION,
-  IncidentType.OTHER,
-];
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const validateCreateRequest = (request: CreateTicketRequest): void => {
-  if (!request.lineNumber || typeof request.lineNumber !== 'string') {
-    throw new ValidationError('lineNumber is required and must be a string');
-  }
-
-  if (!request.email || typeof request.email !== 'string') {
-    throw new ValidationError('email is required and must be a string');
-  }
-
-  if (!EMAIL_REGEX.test(request.email)) {
-    throw new ValidationError('email must be a valid email address');
-  }
-
-  if (!request.incidentType || typeof request.incidentType !== 'string') {
-    throw new ValidationError('incidentType is required and must be a string');
-  }
-
-  if (!VALID_INCIDENT_TYPES.includes(request.incidentType as IncidentType)) {
-    throw new ValidationError(
-      `incidentType must be one of: ${VALID_INCIDENT_TYPES.join(', ')}`
-    );
-  }
-
-  if (request.incidentType === IncidentType.OTHER && (!request.description || request.description.trim() === '')) {
-    throw new ValidationError('description is required when incidentType is OTHER');
-  }
-};
-
 const buildTicket = (request: CreateTicketRequest): Ticket => ({
   ticketId: uuidv4(),
   lineNumber: request.lineNumber,
   email: request.email,
-  incidentType: request.incidentType as IncidentType,
+  incidentType: request.incidentType,
   description: request.description || null,
   status: 'RECEIVED',
   priority: 'PENDING',
@@ -74,8 +34,7 @@ export const createComplaintsService = (
   messaging: IMessagingFacade = defaultMessaging
 ) => ({
   createTicket: async (request: CreateTicketRequest): Promise<Ticket> => {
-    validateCreateRequest(request);
-
+    // Validation is now handled by validateComplaintRequest middleware (SRP §3.1)
     const ticket = buildTicket(request);
 
     logger.info('Ticket created', {
