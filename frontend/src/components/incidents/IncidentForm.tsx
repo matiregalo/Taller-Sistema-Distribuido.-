@@ -3,6 +3,7 @@ import type { FC } from 'react';
 import { IncidentType, IncidentTypeLabels } from '../../types/incident';
 import type { CreateIncidentRequest } from '../../types/incident';
 import { useIncidentForm } from '../../hooks/useIncidentForm';
+import { getFormString, isIncidentType } from '../../utils/typeGuards';
 import SuccessModal from '../modal/SuccessModal';
 
 /**
@@ -22,11 +23,13 @@ const IncidentForm: FC = () => {
 
     // Action wrapper for React 19 form actions
     const submitAction = async (_prevState: unknown, formData: FormData) => {
+        const rawType = getFormString(formData, 'incidentType');
+
         const data: CreateIncidentRequest = {
-            email: formData.get('email') as string,
-            lineNumber: formData.get('lineNumber') as string,
-            incidentType: formData.get('incidentType') as IncidentType,
-            description: formData.get('description') as string || undefined,
+            email: getFormString(formData, 'email'),
+            lineNumber: getFormString(formData, 'lineNumber'),
+            incidentType: isIncidentType(rawType) ? rawType : IncidentType.OTHER,
+            description: getFormString(formData, 'description') || undefined,
         };
 
         return submitIncident(data);
@@ -96,7 +99,10 @@ const IncidentForm: FC = () => {
                         name="incidentType"
                         required
                         value={selectedType}
-                        onChange={(e) => setSelectedType(e.target.value as IncidentType)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (isIncidentType(val)) setSelectedType(val);
+                        }}
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none bg-no-repeat bg-[right_1rem_center] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] disabled:bg-gray-50 disabled:text-gray-400"
                         disabled={isPending}
                     >

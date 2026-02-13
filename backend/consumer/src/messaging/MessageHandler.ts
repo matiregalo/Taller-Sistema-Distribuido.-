@@ -1,5 +1,6 @@
 import { Channel, ConsumeMessage } from 'amqplib';
 import { IncidentType, Incident } from '../types';
+import { isIncidentType } from '../utils/typeGuards';
 import { determinePriority, determineStatus } from '../processor';
 import { logger as defaultLogger } from '../utils/logger';
 import type { ILogger } from '../utils/ILogger';
@@ -23,8 +24,8 @@ export class MessageHandler {
             const content = JSON.parse(msg.content.toString());
             this.logger.info('Message received', { ticketId: content.ticketId, correlationId });
 
-            if (!content.type) {
-                this.logger.warn('Invalid message structure: missing incident type', {
+            if (!content.type || !isIncidentType(content.type)) {
+                this.logger.warn('Invalid message structure: missing or invalid incident type', {
                     ticketId: content.ticketId,
                     correlationId,
                 });
@@ -33,7 +34,7 @@ export class MessageHandler {
                 return;
             }
 
-            const incidentType = content.type as IncidentType;
+            const incidentType: IncidentType = content.type;
 
             if (incidentType === IncidentType.OTHER && !content.description) {
                 this.logger.warn('Invalid message: description required for OTHER type', {

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ValidationError } from '../errors/validation.error.js';
 import { IncidentType, CreateTicketRequest } from '../types/ticket.types.js';
+import { isIncidentType } from '../utils/typeGuards.js';
 
 const VALID_INCIDENT_TYPES: IncidentType[] = [
   IncidentType.NO_SERVICE,
@@ -41,7 +42,7 @@ export const validateComplaintRequest = (
     throw new ValidationError('incidentType is required and must be a string');
   }
 
-  if (!VALID_INCIDENT_TYPES.includes(request.incidentType as IncidentType)) {
+  if (!isIncidentType(request.incidentType)) {
     throw new ValidationError(
       `incidentType must be one of: ${VALID_INCIDENT_TYPES.join(', ')}`
     );
