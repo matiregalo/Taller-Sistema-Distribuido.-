@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { config } from './config/index.js';
+import { serverConfig } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { RabbitMQConnectionManager } from './messaging/RabbitMQConnectionManager.js';
 import { complaintsRouter } from './routes/complaints.routes.js';
@@ -56,10 +56,10 @@ const startServer = async (): Promise<void> => {
     await connectionManager.connect();
 
     // Start Express server
-    app.listen(config.port, () => {
+    app.listen(serverConfig.port, () => {
       logger.info(`Producer service started`, {
-        port: config.port,
-        environment: config.nodeEnv,
+        port: serverConfig.port,
+        environment: serverConfig.nodeEnv,
       });
     });
   } catch (error) {

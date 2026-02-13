@@ -3,7 +3,7 @@ import { logger } from '../utils/logger.js';
 import { RabbitMQConnectionManager } from '../messaging/RabbitMQConnectionManager.js';
 import { TicketMessageSerializer } from '../messaging/TicketMessageSerializer.js';
 import { MessagingFacade } from '../messaging/MessagingFacade.js';
-import { config } from '../config/index.js';
+import { rabbitmqConfig } from '../config/index.js';
 import type { IMessagingFacade } from '../messaging/IMessagingFacade.js';
 import {
   Ticket,
@@ -26,7 +26,7 @@ const buildTicket = (request: CreateTicketRequest): Ticket => ({
 const defaultMessaging: IMessagingFacade = new MessagingFacade(
   RabbitMQConnectionManager.getInstance(),
   new TicketMessageSerializer(),
-  { exchange: config.rabbitmq.exchange, routingKey: config.rabbitmq.routingKey }
+  { exchange: rabbitmqConfig.exchange, routingKey: rabbitmqConfig.routingKey }
 );
 
 // Factory function for dependency injection (testability)

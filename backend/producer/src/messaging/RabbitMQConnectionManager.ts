@@ -1,5 +1,5 @@
 import amqp, { ChannelModel, Channel } from 'amqplib';
-import { config } from '../config/index.js';
+import { rabbitmqConfig } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import type { IConnectionManager } from './IConnectionManager.js';
 
@@ -29,17 +29,17 @@ class RabbitMQConnectionManager implements IConnectionManager {
         }
 
         try {
-            logger.info('Connecting to RabbitMQ...', { url: config.rabbitmq.url });
+            logger.info('Connecting to RabbitMQ...', { url: rabbitmqConfig.url });
 
-            this.connection = await amqp.connect(config.rabbitmq.url);
+            this.connection = await amqp.connect(rabbitmqConfig.url);
             this.channel = await this.connection.createChannel();
 
-            await this.channel.assertExchange(config.rabbitmq.exchange, 'topic', {
+            await this.channel.assertExchange(rabbitmqConfig.exchange, 'topic', {
                 durable: true,
             });
 
             logger.info('Connected to RabbitMQ successfully', {
-                exchange: config.rabbitmq.exchange,
+                exchange: rabbitmqConfig.exchange,
             });
 
             this.setupEventHandlers();
