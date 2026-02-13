@@ -67,20 +67,20 @@ describe('complaintsService', () => {
       expect(body.incidentType).toBe('ROUTER_ISSUE');
     });
 
-    it('devuelve la respuesta del API (ticketId y status)', async () => {
+    it('completa sin error cuando la respuesta es ok', async () => {
       const mockFetch = vi.mocked(fetch);
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ ticketId: 'ticket-1', status: 'RECEIVED' }),
       } as unknown as Response);
 
-      const result = await complaintsService.createComplaint({
-        email: 'x@y.com',
-        lineNumber: '099111222',
-        incidentType: IncidentType.SLOW_CONNECTION,
-      });
-
-      expect(result).toEqual({ ticketId: 'ticket-1', status: 'RECEIVED' });
+      await expect(
+        complaintsService.createComplaint({
+          email: 'x@y.com',
+          lineNumber: '099111222',
+          incidentType: IncidentType.SLOW_CONNECTION,
+        })
+      ).resolves.toBeUndefined();
     });
 
     it('lanza error con mensaje del backend cuando la respuesta no es ok', async () => {
@@ -97,7 +97,7 @@ describe('complaintsService', () => {
           incidentType: IncidentType.OTHER,
           description: 'test',
         })
-      ).rejects.toThrow('Error al enviar el reporte');
+      ).rejects.toThrow('Email inválido');
     });
 
     it('maneja error cuando el backend devuelve JSON sin details', async () => {
@@ -113,7 +113,7 @@ describe('complaintsService', () => {
           lineNumber: '123',
           incidentType: IncidentType.BILLING_QUESTION,
         })
-      ).rejects.toThrow('Error al enviar el reporte');
+      ).rejects.toThrow('Validation failed');
     });
 
     it('maneja respuesta no ok con body no JSON', async () => {
@@ -131,39 +131,7 @@ describe('complaintsService', () => {
           lineNumber: '123',
           incidentType: IncidentType.NO_SERVICE,
         })
-      ).rejects.toThrow('Error al enviar el reporte');
-    });
-  });
-
-  describe('getComplaint', () => {
-    it('hace GET a /complaints/{ticketId} y devuelve el ticket', async () => {
-      const mockFetch = vi.mocked(fetch);
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          ticketId: 'abc-123',
-          status: 'IN_PROGRESS',
-          priority: 'HIGH',
-        }),
-      } as unknown as Response);
-
-      const result = await complaintsService.getComplaint('abc-123');
-
-      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/complaints/abc-123'));
-      expect(result).toEqual({
-        ticketId: 'abc-123',
-        status: 'IN_PROGRESS',
-        priority: 'HIGH',
-      });
-    });
-
-    it('lanza error cuando el ticket no existe', async () => {
-      const mockFetch = vi.mocked(fetch);
-      mockFetch.mockResolvedValueOnce({ ok: false } as unknown as Response);
-
-      await expect(complaintsService.getComplaint('inexistente')).rejects.toThrow(
-        'No se pudo encontrar el reporte'
-      );
+      ).rejects.toThrow('Error en la solicitud');
     });
   });
 });

@@ -1,84 +1,44 @@
-import * as amqp from 'amqplib';
-import { Incident, IncidentType } from './types';
-import { determinePriority, determineStatus } from './processor';
+import { RabbitMQConnectionManager } from './messaging/RabbitMQConnectionManager';
+import { MessageHandler } from './messaging/MessageHandler';
+import { InMemoryIncidentRepository } from './repositories/InMemoryIncidentRepository';
+import { ExponentialBackoff } from './utils/ExponentialBackoff';
+import { startHealthServer } from './lifecycle/healthServer';
+import { registerGracefulShutdown } from './lifecycle/gracefulShutdown';
+import { logger } from './utils/logger';
 
-const RABBITMQ_URL = process.env.RABBITMQ_URL;
-if (!RABBITMQ_URL) {
-  console.error('RABBITMQ_URL environment variable is required');
-  process.exit(1);
-}
-const EXCHANGE_NAME = 'complaints.exchange';
-const QUEUE_NAME = 'complaints.queue';
+const connectionManager = RabbitMQConnectionManager.getInstance();
+const incidentRepository = new InMemoryIncidentRepository();
+const backoff = new ExponentialBackoff({ initialDelay: 1000, maxDelay: 30000, factor: 2 });
 
 const startConsumer = async () => {
   try {
-    console.log(`Conectando a RabbitMQ en ${RABBITMQ_URL}...`);
-    const connection = await amqp.connect(RABBITMQ_URL);
-    const channel = await connection.createChannel();
+    await connectionManager.connect();
 
-    console.log('Verificando exchange...');
-    await channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
+    const channel = connectionManager.getChannel();
+    if (!channel) {
+      throw new Error('Channel not available after connect');
+    }
 
-    console.log('Verificando cola...');
-    const q = await channel.assertQueue(QUEUE_NAME, { durable: true });
+    // Reset backoff on successful connection
+    backoff.reset();
 
-    await channel.bindQueue(q.queue, EXCHANGE_NAME, '#');
+    const handler = new MessageHandler(channel, incidentRepository);
 
-    console.log(`Esperando mensajes en ${q.queue}. Para salir presione CTRL+C`);
+    channel.consume('complaints.queue', (msg) => handler.handle(msg));
 
-    channel.consume(q.queue, (msg) => {
-      if (msg !== null) {
-        try {
-          const content = JSON.parse(msg.content.toString());
-          console.log('Mensaje recibido:', content);
-
-          if (!content.type) {
-            console.warn('Estructura de mensaje inválida: falta el tipo de incidente. Omitiendo lógica.');
-            channel.ack(msg);
-            return;
-          }
-
-          const incidentType = content.type as IncidentType;
-
-          if (incidentType === IncidentType.OTHER && !content.description) {
-             console.warn('Estructura de mensaje inválida: se requiere descripción para el tipo OTHER. Omitiendo lógica.');
-             channel.ack(msg);
-             return;
-          }
-          
-          const priority = determinePriority(incidentType);
-          const status = determineStatus(priority);
-
-          const processedIncident: Incident = {
-            ...content,
-            priority,
-            status,
-            processedAt: new Date()
-          };
-
-          console.log('Incidente procesado:', JSON.stringify(processedIncident, null, 2));
-          
-          channel.ack(msg);
-        } catch (error) {
-          console.error('Error procesando mensaje:', error);
-          channel.ack(msg); 
-        }
-      }
-    });
-
-    connection.on('close', () => {
-      console.error('Conexión a RabbitMQ cerrada. Reintentando en 5s...');
-      setTimeout(startConsumer, 5000);
-    });
-
-    connection.on('error', (err) => {
-        console.error('Error de conexión a RabbitMQ', err);
-    });
-
+    logger.info('Consumer started and listening for messages');
   } catch (error) {
-    console.error('Error iniciando consumidor:', error);
-    setTimeout(startConsumer, 5000);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error starting consumer', { error: errorMessage });
+    backoff.scheduleRetry(startConsumer);
   }
 };
 
+// Graceful shutdown (extracted to lifecycle module — SRP §3.1)
+registerGracefulShutdown(connectionManager);
+
+// Start health-check server (§5.2)
+startHealthServer(connectionManager);
+
 startConsumer();
+

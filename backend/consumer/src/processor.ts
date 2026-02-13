@@ -1,24 +1,15 @@
 import { IncidentType, Priority, IncidentStatus } from './types';
+import { PriorityResolver } from './strategies';
+
+// Single PriorityResolver instance (can be injected for tests)
+const resolver = new PriorityResolver();
 
 export const determinePriority = (type: IncidentType): Priority => {
-  switch (type) {
-    case IncidentType.NO_SERVICE:
-      return Priority.HIGH;
-    case IncidentType.INTERMITTENT_SERVICE:
-    case IncidentType.SLOW_CONNECTION:
-      return Priority.MEDIUM;
-    case IncidentType.ROUTER_ISSUE:
-    case IncidentType.BILLING_QUESTION:
-      return Priority.LOW;
-    case IncidentType.OTHER:
-    default:
-      return Priority.PENDING;
-  }
+  return resolver.resolve(type);
 };
 
 export const determineStatus = (priority: Priority): IncidentStatus => {
-  if (priority === Priority.PENDING) {
-    return IncidentStatus.RECEIVED;
-  }
-  return IncidentStatus.IN_PROGRESS;
+  return priority === Priority.PENDING
+    ? IncidentStatus.RECEIVED
+    : IncidentStatus.IN_PROGRESS;
 };

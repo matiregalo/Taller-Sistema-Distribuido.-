@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 import { complaintsService } from '../../services/complaints.service';
 import type { CreateIncidentRequest } from '../../types/incident';
 import { IncidentType } from '../../types/incident';
@@ -44,7 +45,7 @@ export async function runSequential(
       const msg = getErrorMessage(e);
       errors.push(msg);
       if (errors.length <= STRESS_TEST_LIMITS.maxErrorsLogged) {
-        console.error('Stress test request failed:', msg);
+        logger.error('Stress test request failed:', msg);
       }
     }
   }
@@ -78,7 +79,7 @@ export async function runParallel(
   outcomes
     .filter((o): o is PromiseRejectedResult => o.status === 'rejected')
     .slice(0, STRESS_TEST_LIMITS.maxErrorsLogged)
-    .forEach((o) => console.error('Stress test request failed:', o.reason));
+    .forEach((o) => logger.error('Stress test request failed:', o.reason));
 
   return {
     success,

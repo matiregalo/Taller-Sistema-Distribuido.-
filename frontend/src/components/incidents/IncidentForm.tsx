@@ -1,172 +1,106 @@
-import { useActionState, useState } from 'react';
-import type { FC } from 'react';
+import { type FC } from 'react';
 import { IncidentType, IncidentTypeLabels } from '../../types/incident';
-import type { CreateIncidentRequest } from '../../types/incident';
-import { complaintsService } from '../../services/complaints.service';
-import SuccessModal from './SuccessModal';
+import { useIncidentForm } from '../../hooks';
+import Input from '../ui/Input';
+import Select from '../ui/Select';
+import TextArea from '../ui/TextArea';
+import Button from '../ui/Button';
 
-/**
- * IncidentForm refactorizado para React 19.
- * Se utiliza 'action' en lugar de 'onSubmit' (práctica moderna, aunque onSubmit no esté deprecado, 
- * Actions son el nuevo estándar para mutaciones).
- * Se utiliza 'useActionState' para gestionar el estado de la mutación y la carga.
- */
-const IncidentForm: FC = () => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedType, setSelectedType] = useState<IncidentType>(IncidentType.OTHER);
-    const [error, setError] = useState<string | null>(null);
+interface IncidentFormProps {
+  onSuccess: () => void;
+}
 
-    // Acción para procesar el formulario (React 19 Actions)
-    const submitAction = async (_prevState: unknown, formData: FormData) => {
-        setError(null);
+const IncidentForm: FC<IncidentFormProps> = ({ onSuccess }) => {
+  const {
+      selectedType,
+      setSelectedType,
+      errors,
+      submitIncident,
+  } = useIncidentForm(IncidentType.OTHER);
 
-        const data: CreateIncidentRequest = {
-            email: formData.get('email') as string,
-            lineNumber: formData.get('lineNumber') as string,
-            incidentType: formData.get('incidentType') as IncidentType,
-            description: formData.get('description') as string || undefined,
-        };
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const formData = new FormData(e.currentTarget);
+      const result = await submitIncident(formData);
+      
+      if (result.success) {
+          onSuccess();
+          // Reset form
+          (e.target as HTMLFormElement).reset();
+          setSelectedType(IncidentType.OTHER);
+      }
+  };
 
-        // Validación cliente específica para 'OTHER'
-        if (data.incidentType === IncidentType.OTHER && (!data.description || data.description.trim() === '')) {
-            const message = 'La descripción es obligatoria cuando seleccionas "Otro"';
-            setError(message);
-            return { success: false, error: message };
-        }
+  return (
+      <div className="bg-white p-8 rounded-2xl shadow-xl shadow-indigo-100 border border-indigo-50">
+          <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">Reportar Incidente</h2>
+              <p className="text-gray-500">Completa el formulario para que podamos ayudarte.</p>
+          </div>
 
-        try {
-            await complaintsService.createComplaint(data);
-            setIsModalOpen(true);
-            return { success: true };
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Error desconocido';
-            setError(message);
-            return { success: false, error: message };
-        }
-    };
+          {errors.form && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-center gap-3 animate-in slide-in-from-top-2">
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.form}
+              </div>
+          )}
 
-    const [, formAction, isPending] = useActionState(submitAction, null);
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+              <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  label="Correo Electrónico"
+                  placeholder="tu@email.com"
+                  error={errors.email}
+              />
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setError(null);
-        // Opcional: Podríamos resetear el formulario aquí si fuera un componente controlado, 
-        // pero con Actions y Formdata, el navegador ya maneja gran parte del estado.
-        // Como estamos usando uncontrolled components, el form reset usualmente ocurre 
-        // tras el submit exitoso si no hay errores persistentes.
-    };
+              <Input
+                  id="lineNumber"
+                  name="lineNumber"
+                  type="text"
+                  label="Número de Línea"
+                  placeholder="0123456789"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  error={errors.lineNumber}
+                  onInput={(e) => {
+                      const target = e.target as HTMLInputElement;
+                      target.value = target.value.replace(/[^0-9]/g, '');
+                  }}
+              />
 
-    return (
-        <div className="bg-white p-8 rounded-2xl shadow-xl shadow-indigo-100 border border-indigo-50">
-            <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900">Reportar Incidente</h2>
-                <p className="text-gray-500">Completa el formulario para que podamos ayudarte.</p>
-            </div>
+              <Select
+                  id="incidentType"
+                  name="incidentType"
+                  label="Tipo de Incidente"
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value as IncidentType)}
+                  error={errors.incidentType}
+                  options={Object.entries(IncidentTypeLabels).map(([value, label]) => ({
+                      value,
+                      label,
+                  }))}
+              />
 
-            {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-center gap-3">
-                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {error}
-                </div>
-            )}
+              <TextArea
+                  id="description"
+                  name="description"
+                  label="Descripción"
+                  optional={selectedType !== IncidentType.OTHER}
+                  placeholder="Cuéntanos un poco más sobre lo que sucede..."
+                  rows={4}
+                  error={errors.description}
+              />
 
-            <form action={formAction} className="space-y-6">
-                <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                        Correo Electrónico
-                    </label>
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        required
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
-                        placeholder="tu@email.com"
-                        disabled={isPending}
-                    />
-                </div>
-
-                <div>
-                    <label htmlFor="lineNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                        Número de Línea
-                    </label>
-                    <input
-                        type="text"
-                        id="lineNumber"
-                        name="lineNumber"
-                        required
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
-                        placeholder="0123456789"
-                        disabled={isPending}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        onInput={(e) => {
-                            const target = e.target as HTMLInputElement;
-                            target.value = target.value.replace(/[^0-9]/g, '');
-                        }}
-                    />
-                </div>
-
-                <div>
-                    <label htmlFor="incidentType" className="block text-sm font-medium text-gray-700 mb-1">
-                        Tipo de Incidente
-                    </label>
-                    <select
-                        id="incidentType"
-                        name="incidentType"
-                        required
-                        value={selectedType}
-                        onChange={(e) => setSelectedType(e.target.value as IncidentType)}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none bg-no-repeat bg-[right_1rem_center] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] disabled:bg-gray-50 disabled:text-gray-400"
-                        disabled={isPending}
-                    >
-                        {Object.entries(IncidentTypeLabels).map(([value, label]) => (
-                            <option key={value} value={value}>
-                                {label}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                        Descripción {selectedType !== IncidentType.OTHER && <span className="text-gray-400 font-normal">(Opcional)</span>}
-                    </label>
-                    <textarea
-                        id="description"
-                        name="description"
-                        rows={4}
-                        required={selectedType === IncidentType.OTHER}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none disabled:bg-gray-50 disabled:text-gray-400"
-                        placeholder="Cuéntanos un poco más sobre lo que sucede..."
-                        disabled={isPending}
-                    />
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={isPending}
-                    className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-bold rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                    {isPending ? (
-                        <>
-                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Enviando...
-                        </>
-                    ) : (
-                        'Enviar Reporte'
-                    )}
-                </button>
-            </form>
-
-            <SuccessModal isOpen={isModalOpen} onClose={handleCloseModal} />
-        </div>
-    );
+              <Button type="submit" fullWidth isLoading={false}>
+                  Enviar Reporte
+              </Button>
+          </form>
+      </div>
+  );
 };
 
 export default IncidentForm;
