@@ -1,4 +1,5 @@
-import { config } from '../config/index.js';
+import { serverConfig } from '../config/index.js';
+import type { ILogger } from './ILogger.js';
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
@@ -21,7 +22,7 @@ const createLogEntry = (level: LogLevel, message: string, context?: Record<strin
   context,
 });
 
-export const logger = {
+export const logger: ILogger = {
   info: (message: string, context?: Record<string, unknown>): void => {
     console.log(formatLog(createLogEntry('info', message, context)));
   },
@@ -35,7 +36,7 @@ export const logger = {
   },
 
   debug: (message: string, context?: Record<string, unknown>): void => {
-    if (config.nodeEnv === 'development') {
+    if (serverConfig.nodeEnv === 'development') {
       console.debug(formatLog(createLogEntry('debug', message, context)));
     }
   },

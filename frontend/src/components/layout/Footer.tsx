@@ -1,6 +1,10 @@
 import type { FC } from 'react';
 
-const Footer: FC = () => {
+interface FooterProps {
+    onOpenStressTest?: () => void;
+}
+
+const Footer: FC<FooterProps> = ({ onOpenStressTest }) => {
     return (
         <footer className="bg-gray-50 border-t border-gray-100">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -38,10 +42,19 @@ const Footer: FC = () => {
                     </div>
                 </div>
 
-                <div className="mt-12 pt-8 border-t border-gray-200">
-                    <p className="text-center text-gray-400 text-sm">
+                <div className="mt-12 pt-8 border-t border-gray-200 flex items-center justify-between">
+                    <p className="text-gray-400 text-sm">
                         © {new Date().getFullYear()} Atlas Fiber Inc. Todos los derechos reservados.
                     </p>
+                    {onOpenStressTest && (
+                        <button
+                            type="button"
+                            onClick={onOpenStressTest}
+                            className="text-xs text-gray-400 hover:text-amber-600 transition-colors"
+                        >
+                            ⚡ Pruebas de estrés
+                        </button>
+                    )}
                 </div>
             </div>
         </footer>

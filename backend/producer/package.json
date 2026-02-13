@@ -10,7 +10,8 @@
     "start": "node dist/app.js",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "vitest run ../e2e/complaint-flow.e2e.test.ts --root .."
   },
   "keywords": [
     "microservices",

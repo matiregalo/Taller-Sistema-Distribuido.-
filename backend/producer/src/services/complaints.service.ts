@@ -1,94 +1,54 @@
 import { v4 as uuidv4 } from 'uuid';
-import { complaintsRepository } from '../repositories/complaints.repository.js';
-import { publishTicketEvent } from '../messaging/rabbitmq.js';
 import { logger } from '../utils/logger.js';
-import { ValidationError } from '../errors/validation.error.js';
+import { RabbitMQConnectionManager } from '../messaging/RabbitMQConnectionManager.js';
+import { TicketMessageSerializer } from '../messaging/TicketMessageSerializer.js';
+import { MessagingFacade } from '../messaging/MessagingFacade.js';
+import { rabbitmqConfig } from '../config/index.js';
+import type { IMessagingFacade } from '../messaging/IMessagingFacade.js';
 import {
   Ticket,
   CreateTicketRequest,
-  TicketEventPayload,
   IncidentType,
 } from '../types/ticket.types.js';
 
-const VALID_INCIDENT_TYPES: IncidentType[] = [
-  IncidentType.NO_SERVICE,
-  IncidentType.INTERMITTENT_SERVICE,
-  IncidentType.SLOW_CONNECTION,
-  IncidentType.ROUTER_ISSUE,
-  IncidentType.BILLING_QUESTION,
-  IncidentType.OTHER,
-];
+const buildTicket = (request: CreateTicketRequest): Ticket => ({
+  ticketId: uuidv4(),
+  lineNumber: request.lineNumber,
+  email: request.email,
+  incidentType: request.incidentType,
+  description: request.description || null,
+  status: 'RECEIVED',
+  priority: 'PENDING',
+  createdAt: new Date(),
+});
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Default Facade instance (uses Singleton + Serializer)
+const defaultMessaging: IMessagingFacade = new MessagingFacade(
+  RabbitMQConnectionManager.getInstance(),
+  new TicketMessageSerializer(),
+  { exchange: rabbitmqConfig.exchange, routingKey: rabbitmqConfig.routingKey }
+);
 
-const validateCreateRequest = (request: CreateTicketRequest): void => {
-  if (!request.lineNumber || typeof request.lineNumber !== 'string') {
-    throw new ValidationError('lineNumber is required and must be a string');
-  }
-
-  if (!request.email || typeof request.email !== 'string') {
-    throw new ValidationError('email is required and must be a string');
-  }
-
-  if (!EMAIL_REGEX.test(request.email)) {
-    throw new ValidationError('email must be a valid email address');
-  }
-
-  if (!request.incidentType || typeof request.incidentType !== 'string') {
-    throw new ValidationError('incidentType is required and must be a string');
-  }
-
-  if (!VALID_INCIDENT_TYPES.includes(request.incidentType as IncidentType)) {
-    throw new ValidationError(
-      `incidentType must be one of: ${VALID_INCIDENT_TYPES.join(', ')}`
-    );
-  }
-
-  if (request.incidentType === IncidentType.OTHER && (!request.description || request.description.trim() === '')) {
-    throw new ValidationError('description is required when incidentType is OTHER');
-  }
-};
-
-export const complaintsService = {
+// Factory function for dependency injection (testability)
+export const createComplaintsService = (
+  messaging: IMessagingFacade = defaultMessaging
+) => ({
   createTicket: async (request: CreateTicketRequest): Promise<Ticket> => {
-    validateCreateRequest(request);
-
-    const ticket: Ticket = {
-      ticketId: uuidv4(),
-      lineNumber: request.lineNumber,
-      email: request.email,
-      incidentType: request.incidentType as IncidentType,
-      description: request.description || null,
-      status: 'RECEIVED',
-      priority: 'PENDING',
-      createdAt: new Date(),
-    };
-
-    complaintsRepository.save(ticket);
+    // Validation is now handled by validateComplaintRequest middleware (SRP §3.1)
+    const ticket = buildTicket(request);
 
     logger.info('Ticket created', {
       ticketId: ticket.ticketId,
       incidentType: ticket.incidentType,
     });
 
-    const eventPayload: TicketEventPayload = {
-      ticketId: ticket.ticketId,
-      lineNumber: ticket.lineNumber,
-      type: ticket.incidentType,
-      description: ticket.description,
-      createdAt: ticket.createdAt.toISOString(),
-    };
-
-    await publishTicketEvent(eventPayload);
+    // Publish event — persistence is handled by the Consumer (§2.2)
+    // Facade throws MessagingError if it fails
+    await messaging.publishTicketCreated(ticket);
 
     return ticket;
   },
+});
 
-  getTicketById: (ticketId: string): Ticket | undefined => {
-    if (!ticketId || typeof ticketId !== 'string') {
-      throw new ValidationError('ticketId is required and must be a string');
-    }
-
-    return complaintsRepository.findById(ticketId);
-  },
-};
+// Default instance for backward compatibility
+export const complaintsService = createComplaintsService();

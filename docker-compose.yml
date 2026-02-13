@@ -48,6 +48,15 @@ services:
       - ./backend/consumer/.env.example
     environment:
       RABBITMQ_URL: amqp://rabbitmq:5672
+      HEALTH_PORT: "3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    ports:
+      - "3001:3001"
     depends_on:
       rabbitmq:
         condition: service_healthy

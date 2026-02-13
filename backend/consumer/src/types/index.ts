@@ -20,11 +20,12 @@ export enum IncidentStatus {
 }
 
 export interface Incident {
-  id: string;
+  ticketId: string;
+  lineNumber: string;
   type: IncidentType;
   description?: string;
-  priority?: Priority;
-  status?: IncidentStatus;
-  customerId: string;
-  createdAt: Date;
+  priority: Priority;
+  status: IncidentStatus;
+  createdAt: string;
+  processedAt?: Date;
 }

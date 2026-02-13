@@ -15,12 +15,13 @@ Sistema distribuido para la gestión de quejas de clientes de un proveedor de se
 
 ## 👥 Equipo
 
-| Integrante | Rol | Responsabilidad |
-|------------|-----|-----------------|
-| **Nahuel Lemes** | Producer | API REST y publicación de mensajes a RabbitMQ |
-| **Sebastián Stelmaj** | Consumer | Procesamiento de incidentes desde la cola |
-| **Matias Regalo** | QA | Aseguramiento de calidad y pruebas |
-| **Cristian Renz** | Frontend | Interfaz de usuario en React |
+- **Nahuel Lemes**
+- **Sebastián Stelmaj**
+- **Matias Regalo**
+- **Cristian Renz**
+- **Alexander Molina** 
+
+---
 
 ## 🔄 Flujo de Trabajo y Lógica del Sistema
 
