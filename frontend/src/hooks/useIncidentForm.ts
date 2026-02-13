@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { complaintsService } from '../../services/complaints.service';
-import type { CreateIncidentRequest, IncidentType } from '../../types/incident';
+import { complaintsService } from '../services/complaints.service';
+import type { CreateIncidentRequest, IncidentType } from '../types/incident';
 
 export interface UseIncidentFormReturn {
   selectedType: IncidentType;
