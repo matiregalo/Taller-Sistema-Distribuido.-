@@ -1,15 +1,18 @@
 import * as amqp from 'amqplib';
 import { ChannelModel, Channel } from 'amqplib';
 import type { IConnectionManager } from './IConnectionManager';
+import { logger } from '../utils/logger';
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL;
 if (!RABBITMQ_URL) {
-    console.error('RABBITMQ_URL environment variable is required');
+    logger.error('RABBITMQ_URL environment variable is required');
     process.exit(1);
 }
 
 const EXCHANGE_NAME = 'complaints.exchange';
 const QUEUE_NAME = 'complaints.queue';
+const DLX_EXCHANGE = 'complaints.dlx';
+const DLQ_NAME = 'complaints.dlq';
 
 class RabbitMQConnectionManager implements IConnectionManager {
     private static instance: RabbitMQConnectionManager | null = null;
@@ -34,18 +37,30 @@ class RabbitMQConnectionManager implements IConnectionManager {
             return;
         }
 
-        console.log(`Conectando a RabbitMQ en ${RABBITMQ_URL}...`);
+        logger.info(`Connecting to RabbitMQ at ${RABBITMQ_URL}...`);
         this.connection = await amqp.connect(RABBITMQ_URL!);
         this.channel = await this.connection.createChannel();
 
-        console.log('Verificando exchange...');
+        // Dead-Letter Exchange + Queue (§4.4)
+        logger.info('Asserting DLX exchange and DLQ...');
+        await this.channel.assertExchange(DLX_EXCHANGE, 'fanout', { durable: true });
+        await this.channel.assertQueue(DLQ_NAME, { durable: true });
+        await this.channel.bindQueue(DLQ_NAME, DLX_EXCHANGE, '');
+
+        // Main exchange
+        logger.info('Asserting main exchange...');
         await this.channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
 
-        console.log('Verificando cola...');
-        const q = await this.channel.assertQueue(QUEUE_NAME, { durable: true });
+        // Main queue with DLX configuration
+        logger.info('Asserting main queue with DLQ binding...');
+        const q = await this.channel.assertQueue(QUEUE_NAME, {
+            durable: true,
+            deadLetterExchange: DLX_EXCHANGE,
+            deadLetterRoutingKey: '',
+        });
         await this.channel.bindQueue(q.queue, EXCHANGE_NAME, '#');
 
-        console.log(`Esperando mensajes en ${q.queue}. Para salir presione CTRL+C`);
+        logger.info(`Waiting for messages on ${q.queue}. Press CTRL+C to exit`);
 
         this.setupEventHandlers();
     }
@@ -59,7 +74,8 @@ class RabbitMQConnectionManager implements IConnectionManager {
                 await this.connection.close();
             }
         } catch (error) {
-            console.error('Error closing RabbitMQ connection', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            logger.error('Error closing RabbitMQ connection', { error: errorMessage });
         } finally {
             this.channel = null;
             this.connection = null;
@@ -76,13 +92,13 @@ class RabbitMQConnectionManager implements IConnectionManager {
 
     private setupEventHandlers(): void {
         this.connection?.on('close', () => {
-            console.error('Conexión a RabbitMQ cerrada. Reintentando en 5s...');
+            logger.error('RabbitMQ connection closed. Retrying in 5s...');
             this.connection = null;
             this.channel = null;
         });
 
         this.connection?.on('error', (err) => {
-            console.error('Error de conexión a RabbitMQ', err);
+            logger.error('RabbitMQ connection error', { error: err.message });
         });
     }
 }

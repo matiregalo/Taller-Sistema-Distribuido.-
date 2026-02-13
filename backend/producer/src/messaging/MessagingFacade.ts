@@ -28,7 +28,7 @@ export class MessagingFacade implements IMessagingFacade {
             this.config.exchange,
             this.config.routingKey,
             message,
-            { persistent: true, contentType: 'application/json' }
+            { persistent: true, contentType: 'application/json', correlationId: ticket.ticketId }
         );
 
         if (!published) {
