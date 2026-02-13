@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { serverConfig } from './config/index.js';
+import { corsOptions } from './config/cors.config.js';
 import { logger } from './utils/logger.js';
 import { RabbitMQConnectionManager } from './messaging/RabbitMQConnectionManager.js';
 import { complaintsRouter } from './routes/complaints.routes.js';
@@ -11,26 +12,7 @@ import { metrics } from './utils/metrics.js';
 const app = express();
 
 // Middleware
-const allowedOrigins = [
-  'http://localhost',
-  'http://localhost:80',
-  'http://127.0.0.1',
-  'http://127.0.0.1:80'
-];
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes
