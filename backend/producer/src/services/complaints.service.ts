@@ -1,5 +1,4 @@
 import { v4 as uuidv4 } from 'uuid';
-import { complaintsRepository } from '../repositories/complaints.repository.js';
 import { logger } from '../utils/logger.js';
 import { ValidationError } from '../errors/validation.error.js';
 import { RabbitMQConnectionManager } from '../messaging/RabbitMQConnectionManager.js';
@@ -79,25 +78,16 @@ export const createComplaintsService = (
 
     const ticket = buildTicket(request);
 
-    complaintsRepository.save(ticket);
-
     logger.info('Ticket created', {
       ticketId: ticket.ticketId,
       incidentType: ticket.incidentType,
     });
 
-    // Facade: simple and clear — throws MessagingError if it fails
+    // Publish event — persistence is handled by the Consumer (§2.2)
+    // Facade throws MessagingError if it fails
     await messaging.publishTicketCreated(ticket);
 
     return ticket;
-  },
-
-  getTicketById: (ticketId: string): Ticket | undefined => {
-    if (!ticketId || typeof ticketId !== 'string') {
-      throw new ValidationError('ticketId is required and must be a string');
-    }
-
-    return complaintsRepository.findById(ticketId);
   },
 });
 

@@ -1,8 +1,10 @@
 import { RabbitMQConnectionManager } from './messaging/RabbitMQConnectionManager';
 import { MessageHandler } from './messaging/MessageHandler';
+import { InMemoryIncidentRepository } from './repositories/InMemoryIncidentRepository';
 import { logger } from './utils/logger';
 
 const connectionManager = RabbitMQConnectionManager.getInstance();
+const incidentRepository = new InMemoryIncidentRepository();
 
 const startConsumer = async () => {
   try {
@@ -13,7 +15,7 @@ const startConsumer = async () => {
       throw new Error('Channel not available after connect');
     }
 
-    const handler = new MessageHandler(channel);
+    const handler = new MessageHandler(channel, incidentRepository);
 
     channel.consume('complaints.queue', (msg) => handler.handle(msg));
 

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from './app.js';
-import { complaintsRepository } from './repositories/complaints.repository.js';
 
 // Mock the MessagingFacade to avoid needing RabbitMQ during API tests
 vi.mock('./messaging/MessagingFacade.js', () => ({
@@ -26,7 +25,6 @@ vi.mock('./messaging/RabbitMQConnectionManager.js', () => ({
 describe('POST /complaints', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    complaintsRepository.clear();
   });
 
   it('rechaza requests incompletos (sin lineNumber)', async () => {
@@ -127,35 +125,9 @@ describe('POST /complaints', () => {
 });
 
 describe('GET /complaints/:ticketId', () => {
-  beforeEach(() => {
-    complaintsRepository.clear();
-  });
-
-  it('devuelve 404 si el ticket no existe', async () => {
-    const res = await request(app)
-      .get('/complaints/id-inexistente-123')
+  it('devuelve 404 (endpoint eliminado — persistencia delegada al Consumer)', async () => {
+    await request(app)
+      .get('/complaints/any-id')
       .expect(404);
-
-    expect(res.body.error).toBe('Ticket not found');
-  });
-
-  it('devuelve 200 con ticket (ticketId, status, priority) si existe', async () => {
-    const createRes = await request(app)
-      .post('/complaints')
-      .send({
-        lineNumber: '099111222',
-        email: 'get@test.com',
-        incidentType: 'ROUTER_ISSUE',
-      })
-      .expect(201);
-
-    const ticketId = createRes.body.ticketId;
-    const getRes = await request(app)
-      .get(`/complaints/${ticketId}`)
-      .expect(200);
-
-    expect(getRes.body.ticketId).toBe(ticketId);
-    expect(getRes.body.status).toBeDefined();
-    expect(getRes.body.priority).toBeDefined();
   });
 });

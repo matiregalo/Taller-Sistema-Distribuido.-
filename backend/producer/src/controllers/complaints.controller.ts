@@ -24,27 +24,4 @@ export const complaintsController = {
       next(error);
     }
   },
-
-  getComplaintById: (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): void => {
-    try {
-      const { ticketId } = req.params;
-
-      logger.debug('Received get complaint request', { ticketId });
-
-      const ticket = complaintsService.getTicketById(ticketId);
-
-      if (!ticket) {
-        res.status(404).json({ error: 'Ticket not found' });
-        return;
-      }
-
-      res.status(200).json(ticket);
-    } catch (error) {
-      next(error);
-    }
-  },
 };

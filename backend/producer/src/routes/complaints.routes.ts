@@ -3,10 +3,7 @@ import { complaintsController } from '../controllers/complaints.controller.js';
 
 const router = Router();
 
-// POST /complaints - Create a new complaint
+// POST /complaints - Create a new complaint (publish event)
 router.post('/', complaintsController.createComplaint);
-
-// GET /complaints/:ticketId - Get a complaint by ID
-router.get('/:ticketId', complaintsController.getComplaintById);
 
 export { router as complaintsRouter };

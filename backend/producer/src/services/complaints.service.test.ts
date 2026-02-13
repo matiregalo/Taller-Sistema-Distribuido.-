@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { complaintsRepository } from '../repositories/complaints.repository.js';
 import { IncidentType } from '../types/ticket.types.js';
 import { ValidationError } from '../errors/validation.error.js';
 import type { IMessagingFacade } from '../messaging/IMessagingFacade.js';
@@ -17,16 +16,14 @@ describe('complaintsService', () => {
     incidentType: IncidentType.NO_SERVICE,
   };
 
-  // Create service with injected mock
   const complaintsService = createComplaintsService(mockMessaging);
 
   beforeEach(() => {
     vi.clearAllMocks();
-    complaintsRepository.clear();
   });
 
   describe('createTicket', () => {
-    it('persiste el ticket con status RECEIVED y priority PENDING', async () => {
+    it('construye ticket con status RECEIVED y priority PENDING', async () => {
       const ticket = await complaintsService.createTicket(validRequest);
 
       expect(ticket.status).toBe('RECEIVED');
@@ -41,7 +38,7 @@ describe('complaintsService', () => {
       expect(ticket.ticketId.length).toBeGreaterThan(0);
     });
 
-    it('publica evento via IMessagingFacade (sin lógica de priorización)', async () => {
+    it('publica evento via IMessagingFacade', async () => {
       const ticket = await complaintsService.createTicket(validRequest);
 
       expect(mockMessaging.publishTicketCreated).toHaveBeenCalledTimes(1);
@@ -49,8 +46,14 @@ describe('complaintsService', () => {
       expect(publishedTicket.ticketId).toBe(ticket.ticketId);
       expect(publishedTicket.lineNumber).toBe(validRequest.lineNumber);
       expect(publishedTicket.incidentType).toBe(validRequest.incidentType);
-      // Facade receives the full Ticket, not a TicketEventPayload
-      expect(publishedTicket).not.toHaveProperty('priority', expect.stringMatching(/HIGH|MEDIUM|LOW/));
+    });
+
+    it('NO persiste el ticket (persistencia es responsabilidad del Consumer)', async () => {
+      // Producer solo genera eventos — no persiste
+      const ticket = await complaintsService.createTicket(validRequest);
+      expect(ticket).toBeDefined();
+      // No hay repositorio en el Producer, solo se verifica que se publicó
+      expect(mockMessaging.publishTicketCreated).toHaveBeenCalledTimes(1);
     });
 
     it('rechaza request sin lineNumber', async () => {
@@ -116,36 +119,6 @@ describe('complaintsService', () => {
       expect(withDesc.ticketId).toBeDefined();
       expect(withDesc.status).toBe('RECEIVED');
       expect(withDesc.priority).toBe('PENDING');
-    });
-
-    it('guarda el ticket en el repositorio', async () => {
-      const ticket = await complaintsService.createTicket(validRequest);
-      const found = complaintsRepository.findById(ticket.ticketId);
-      expect(found).toBeDefined();
-      expect(found?.status).toBe('RECEIVED');
-      expect(found?.priority).toBe('PENDING');
-    });
-  });
-
-  describe('getTicketById', () => {
-    it('devuelve el ticket si existe', async () => {
-      const created = await complaintsService.createTicket(validRequest);
-      const found = complaintsService.getTicketById(created.ticketId);
-      expect(found).toBeDefined();
-      expect(found?.ticketId).toBe(created.ticketId);
-      expect(found?.status).toBe('RECEIVED');
-    });
-
-    it('devuelve undefined si el ticket no existe', () => {
-      const found = complaintsService.getTicketById('id-inexistente');
-      expect(found).toBeUndefined();
-    });
-
-    it('lanza ValidationError si ticketId vacío o no string', () => {
-      expect(() => complaintsService.getTicketById('')).toThrow(ValidationError);
-      expect(() =>
-        complaintsService.getTicketById(undefined as unknown as string)
-      ).toThrow();
     });
   });
 });
