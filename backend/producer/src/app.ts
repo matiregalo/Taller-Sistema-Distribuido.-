@@ -5,6 +5,7 @@ import { logger } from './utils/logger.js';
 import { RabbitMQConnectionManager } from './messaging/RabbitMQConnectionManager.js';
 import { complaintsRouter } from './routes/complaints.routes.js';
 import { errorHandlerChain } from './middlewares/errorHandler.js';
+import { registerGracefulShutdown } from './lifecycle/gracefulShutdown.js';
 
 const app = express();
 
@@ -45,15 +46,8 @@ errorHandlerChain.forEach((handler) => app.use(handler));
 // Singleton connection manager
 const connectionManager = RabbitMQConnectionManager.getInstance();
 
-// Graceful shutdown
-const gracefulShutdown = async (signal: string): Promise<void> => {
-  logger.info(`Received ${signal}. Shutting down gracefully...`);
-  await connectionManager.close();
-  process.exit(0);
-};
-
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+// Graceful shutdown (extracted to lifecycle module — SRP §3.1)
+registerGracefulShutdown(connectionManager);
 
 // Start server
 const startServer = async (): Promise<void> => {
