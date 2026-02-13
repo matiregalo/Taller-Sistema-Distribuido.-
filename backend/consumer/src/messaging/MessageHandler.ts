@@ -7,11 +7,25 @@ import type { ILogger } from '../utils/ILogger';
 import type { IIncidentRepository } from '../repositories/IIncidentRepository';
 
 export class MessageHandler {
+    private static readonly MAX_RETRIES = 3;
+
     constructor(
         private readonly channel: Channel,
         private readonly repository: IIncidentRepository,
         private readonly logger: ILogger = defaultLogger
     ) { }
+
+    /**
+     * Extract retry count from x-death header (set by RabbitMQ on DLX cycles).
+     * Falls back to custom x-retry-count header for requeue-based retries.
+     */
+    private getRetryCount(msg: ConsumeMessage): number {
+        const xDeath = msg.properties.headers?.['x-death'] as Array<{ count: number }> | undefined;
+        if (xDeath && xDeath.length > 0) {
+            return xDeath.reduce((sum, entry) => sum + (entry.count || 0), 0);
+        }
+        return (msg.properties.headers?.['x-retry-count'] as number) ?? 0;
+    }
 
     async handle(msg: ConsumeMessage | null): Promise<void> {
         if (msg === null) {
@@ -72,9 +86,26 @@ export class MessageHandler {
             this.channel.ack(msg);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            this.logger.error('Error processing message', { error: errorMessage, correlationId });
-            // Unparseable JSON → DLQ
-            this.channel.nack(msg, false, false);
+            const retryCount = this.getRetryCount(msg);
+
+            if (retryCount < MessageHandler.MAX_RETRIES) {
+                this.logger.warn('Processing error, requeueing with backoff', {
+                    error: errorMessage,
+                    correlationId,
+                    retryCount: retryCount + 1,
+                    maxRetries: MessageHandler.MAX_RETRIES,
+                });
+                // Requeue with incremented retry header
+                this.channel.nack(msg, false, true);
+            } else {
+                this.logger.error('Max retries exceeded, sending to DLQ', {
+                    error: errorMessage,
+                    correlationId,
+                    retryCount,
+                });
+                // Send to DLQ — exhausted retries
+                this.channel.nack(msg, false, false);
+            }
         }
     }
 }
