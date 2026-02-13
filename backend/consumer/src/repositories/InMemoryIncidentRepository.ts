@@ -10,8 +10,5 @@ export class InMemoryIncidentRepository implements IIncidentRepository {
         logger.debug('Incident persisted', { ticketId: incident.ticketId });
         return incident;
     }
-
-    findById(ticketId: string): Incident | undefined {
-        return this.incidents.get(ticketId);
-    }
 }
+
