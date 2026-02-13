@@ -1,19 +1,8 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-export interface HttpClientConfig {
+interface HttpClientConfig {
   baseUrl: string;
   defaultHeaders?: Record<string, string>;
-}
-
-export interface HttpResponse<T> {
-  data: T;
-  status: number;
-}
-
-export interface HttpError {
-  message: string;
-  status?: number;
-  details?: string;
 }
 
 /**

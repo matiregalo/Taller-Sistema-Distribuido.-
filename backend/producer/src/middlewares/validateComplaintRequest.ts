@@ -3,15 +3,6 @@ import { ValidationError } from '../errors/validation.error.js';
 import { IncidentType, CreateTicketRequest } from '../types/ticket.types.js';
 import { isIncidentType } from '../utils/typeGuards.js';
 
-const VALID_INCIDENT_TYPES: IncidentType[] = [
-  IncidentType.NO_SERVICE,
-  IncidentType.INTERMITTENT_SERVICE,
-  IncidentType.SLOW_CONNECTION,
-  IncidentType.ROUTER_ISSUE,
-  IncidentType.BILLING_QUESTION,
-  IncidentType.OTHER,
-];
-
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
@@ -44,7 +35,7 @@ export const validateComplaintRequest = (
 
   if (!isIncidentType(request.incidentType)) {
     throw new ValidationError(
-      `incidentType must be one of: ${VALID_INCIDENT_TYPES.join(', ')}`
+      `incidentType must be one of: ${Object.values(IncidentType).join(', ')}`
     );
   }
 
