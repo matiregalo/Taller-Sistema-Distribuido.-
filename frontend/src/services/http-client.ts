@@ -1,5 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+import { logger } from '../utils/logger';
+
 interface HttpClientConfig {
   baseUrl: string;
   defaultHeaders?: Record<string, string>;
@@ -59,7 +61,7 @@ export class HttpClient {
       const message = errorData.details ?? errorData.error ?? 'Error en la solicitud';
       
       if (errorData.details || errorData.error) {
-        console.error('API error:', message);
+        logger.error('API error:', message);
       }
 
       throw new Error(message);

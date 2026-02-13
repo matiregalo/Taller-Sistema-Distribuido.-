@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { logger } from '../../utils/logger';
 import { buildPayloads, runSequential, runParallel } from './stressTestRunner';
 import type { StressTestMode, StressTestRunResult } from './types';
 import { STRESS_TEST_LIMITS } from './types';
@@ -28,7 +29,7 @@ export function useStressTest() {
       const runResult = await run(payloads);
       setResult(runResult);
     } catch (e) {
-      console.error('Stress test run error:', e);
+      logger.error('Stress test run error:', e);
       setResult({
         success: 0,
         failed: num,
