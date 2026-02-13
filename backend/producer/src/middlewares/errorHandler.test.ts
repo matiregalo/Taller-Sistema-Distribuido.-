@@ -1,57 +1,104 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { errorHandler } from './errorHandler.js';
+import { Request, Response, NextFunction } from 'express';
 import { ValidationError } from '../errors/validation.error.js';
-import type { Request, Response, NextFunction } from 'express';
+import { MessagingError } from '../errors/messaging.error.js';
+import { validationErrorHandler } from './errorHandlers/validationErrorHandler.js';
+import { jsonSyntaxErrorHandler } from './errorHandlers/jsonSyntaxErrorHandler.js';
+import { messagingErrorHandler } from './errorHandlers/messagingErrorHandler.js';
+import { defaultErrorHandler } from './errorHandlers/defaultErrorHandler.js';
 
-describe('errorHandler', () => {
-  let mockReq: Partial<Request>;
-  let mockRes: Partial<Response>;
+const mockRequest = {} as Request;
+const createMockResponse = () => {
+  const res = {
+    status: vi.fn().mockReturnThis(),
+    json: vi.fn().mockReturnThis(),
+  } as unknown as Response;
+  return res;
+};
+
+describe('Error Handler Chain', () => {
   let mockNext: NextFunction;
-  let resStatus: ReturnType<typeof vi.fn>;
-  let resJson: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    resJson = vi.fn();
-    resStatus = vi.fn().mockReturnValue({ json: resJson });
-    mockReq = {};
-    mockRes = { status: resStatus, json: resJson } as unknown as Partial<Response>;
     mockNext = vi.fn();
   });
 
-  it('responde 400 con Validation Error cuando el error es ValidationError', () => {
-    const err = new ValidationError('lineNumber is required');
-    errorHandler(err, mockReq as Request, mockRes as Response, mockNext);
-    expect(resStatus).toHaveBeenCalledWith(400);
-    expect(resJson).toHaveBeenCalledWith({
-      error: 'Validation Error',
-      details: 'lineNumber is required',
+  describe('validationErrorHandler', () => {
+    it('maneja ValidationError con status 400', () => {
+      const res = createMockResponse();
+      const error = new ValidationError('campo inválido');
+      validationErrorHandler(error, mockRequest, res, mockNext);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Validation Error',
+        details: 'campo inválido',
+      });
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('pasa al siguiente handler si no es ValidationError', () => {
+      const res = createMockResponse();
+      const error = new Error('otro error');
+      validationErrorHandler(error, mockRequest, res, mockNext);
+      expect(mockNext).toHaveBeenCalledWith(error);
+      expect(res.status).not.toHaveBeenCalled();
     });
   });
 
-  it('responde 400 con Invalid JSON cuando es SyntaxError y tiene body', () => {
-    const err = new SyntaxError('Unexpected token');
-    (err as SyntaxError & { body?: unknown }).body = {};
-    errorHandler(err, mockReq as Request, mockRes as Response, mockNext);
-    expect(resStatus).toHaveBeenCalledWith(400);
-    expect(resJson).toHaveBeenCalledWith({
-      error: 'Invalid JSON',
-      details: 'Request body contains invalid JSON',
+  describe('jsonSyntaxErrorHandler', () => {
+    it('maneja SyntaxError de JSON con status 400', () => {
+      const res = createMockResponse();
+      const error = new SyntaxError('Unexpected token');
+      (error as Record<string, unknown>).body = 'invalid json';
+      jsonSyntaxErrorHandler(error, mockRequest, res, mockNext);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Invalid JSON',
+        details: 'The request body contains invalid JSON',
+      });
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('pasa al siguiente si no es SyntaxError con body', () => {
+      const res = createMockResponse();
+      const error = new SyntaxError('Unexpected token');
+      // No 'body' property
+      jsonSyntaxErrorHandler(error, mockRequest, res, mockNext);
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
-  it('responde 500 con Internal Server Error para cualquier otro error', () => {
-    const err = new Error('Database connection failed');
-    errorHandler(err, mockReq as Request, mockRes as Response, mockNext);
-    expect(resStatus).toHaveBeenCalledWith(500);
-    expect(resJson).toHaveBeenCalledWith({
-      error: 'Internal Server Error',
+  describe('messagingErrorHandler', () => {
+    it('maneja MessagingError con status 503', () => {
+      const res = createMockResponse();
+      const error = new MessagingError('canal no disponible', 'ticket-123');
+      messagingErrorHandler(error, mockRequest, res, mockNext);
+      expect(res.status).toHaveBeenCalledWith(503);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Service Unavailable',
+        details: 'The messaging service is temporarily unavailable',
+      });
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('pasa al siguiente si no es MessagingError', () => {
+      const res = createMockResponse();
+      const error = new Error('otro error');
+      messagingErrorHandler(error, mockRequest, res, mockNext);
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
-  it('SyntaxError sin body no se trata como JSON inválido (500)', () => {
-    const err = new SyntaxError('Other syntax error');
-    errorHandler(err, mockReq as Request, mockRes as Response, mockNext);
-    expect(resStatus).toHaveBeenCalledWith(500);
-    expect(resJson).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+  describe('defaultErrorHandler', () => {
+    it('maneja cualquier error con status 500', () => {
+      const res = createMockResponse();
+      const error = new Error('error inesperado');
+      defaultErrorHandler(error, mockRequest, res, mockNext);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Internal Server Error',
+        details: 'An unexpected error occurred',
+      });
+    });
   });
 });

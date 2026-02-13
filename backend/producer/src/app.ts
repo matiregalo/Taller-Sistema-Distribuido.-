@@ -4,7 +4,7 @@ import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { RabbitMQConnectionManager } from './messaging/RabbitMQConnectionManager.js';
 import { complaintsRouter } from './routes/complaints.routes.js';
-import { errorHandler } from './middlewares/errorHandler.js';
+import { errorHandlerChain } from './middlewares/errorHandler.js';
 
 const app = express();
 
@@ -40,7 +40,7 @@ app.get('/health', (_req, res) => {
 });
 
 // Error handling middleware (must be last)
-app.use(errorHandler);
+errorHandlerChain.forEach((handler) => app.use(handler));
 
 // Singleton connection manager
 const connectionManager = RabbitMQConnectionManager.getInstance();
