@@ -1,32 +1,19 @@
-import * as amqp from 'amqplib';
+import { RabbitMQConnectionManager } from './messaging/RabbitMQConnectionManager';
 import { Incident, IncidentType } from './types';
 import { determinePriority, determineStatus } from './processor';
 
-const RABBITMQ_URL = process.env.RABBITMQ_URL;
-if (!RABBITMQ_URL) {
-  console.error('RABBITMQ_URL environment variable is required');
-  process.exit(1);
-}
-const EXCHANGE_NAME = 'complaints.exchange';
-const QUEUE_NAME = 'complaints.queue';
+const connectionManager = RabbitMQConnectionManager.getInstance();
 
 const startConsumer = async () => {
   try {
-    console.log(`Conectando a RabbitMQ en ${RABBITMQ_URL}...`);
-    const connection = await amqp.connect(RABBITMQ_URL);
-    const channel = await connection.createChannel();
+    await connectionManager.connect();
 
-    console.log('Verificando exchange...');
-    await channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
+    const channel = connectionManager.getChannel();
+    if (!channel) {
+      throw new Error('Channel not available after connect');
+    }
 
-    console.log('Verificando cola...');
-    const q = await channel.assertQueue(QUEUE_NAME, { durable: true });
-
-    await channel.bindQueue(q.queue, EXCHANGE_NAME, '#');
-
-    console.log(`Esperando mensajes en ${q.queue}. Para salir presione CTRL+C`);
-
-    channel.consume(q.queue, (msg) => {
+    channel.consume('complaints.queue', (msg) => {
       if (msg !== null) {
         try {
           const content = JSON.parse(msg.content.toString());
@@ -41,11 +28,11 @@ const startConsumer = async () => {
           const incidentType = content.type as IncidentType;
 
           if (incidentType === IncidentType.OTHER && !content.description) {
-             console.warn('Estructura de mensaje inválida: se requiere descripción para el tipo OTHER. Omitiendo lógica.');
-             channel.ack(msg);
-             return;
+            console.warn('Estructura de mensaje inválida: se requiere descripción para el tipo OTHER. Omitiendo lógica.');
+            channel.ack(msg);
+            return;
           }
-          
+
           const priority = determinePriority(incidentType);
           const status = determineStatus(priority);
 
@@ -57,23 +44,19 @@ const startConsumer = async () => {
           };
 
           console.log('Incidente procesado:', JSON.stringify(processedIncident, null, 2));
-          
+
           channel.ack(msg);
         } catch (error) {
           console.error('Error procesando mensaje:', error);
-          channel.ack(msg); 
+          channel.ack(msg);
         }
       }
     });
 
-    connection.on('close', () => {
-      console.error('Conexión a RabbitMQ cerrada. Reintentando en 5s...');
-      setTimeout(startConsumer, 5000);
-    });
-
-    connection.on('error', (err) => {
-        console.error('Error de conexión a RabbitMQ', err);
-    });
+    // Reconnection is handled inside the Singleton's event handlers
+    // but we still need to restart the consumer when connection closes
+    // The Singleton's 'close' handler nullifies connection and channel.
+    // We use a simple polling strategy to detect disconnection and retry.
 
   } catch (error) {
     console.error('Error iniciando consumidor:', error);

@@ -1,45 +1,38 @@
+import { httpClient } from './http-client';
 import type { CreateIncidentRequest } from '../types/incident';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+/**
+ * Ticket response from the API.
+ */
+export interface TicketResponse {
+  ticketId: string;
+  lineNumber: string;
+  email: string;
+  incidentType: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  createdAt: string;
+}
 
+/**
+ * Service for managing complaints.
+ * Uses the HTTP client for API communication.
+ */
 export const complaintsService = {
-    createComplaint: async (data: CreateIncidentRequest) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/complaints`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            });
+  /**
+   * Creates a new complaint.
+   * @throws Error if the request fails
+   */
+  createComplaint: async (data: CreateIncidentRequest): Promise<TicketResponse> => {
+    return httpClient.post<CreateIncidentRequest, TicketResponse>('/complaints', data);
+  },
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                const rawMessage = errorData.details ?? errorData.error;
-                if (rawMessage) console.error('Complaints API error:', rawMessage);
-                throw new Error('Error al enviar el reporte');
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Complaints Service Error:', error);
-            throw error;
-        }
-    },
-
-    getComplaint: async (ticketId: string) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/complaints/${ticketId}`);
-
-            if (!response.ok) {
-                console.error('getComplaint failed:', response.status);
-                throw new Error('No se pudo encontrar el reporte');
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Complaints Service Error:', error);
-            throw error;
-        }
-    },
+  /**
+   * Gets a complaint by ticket ID.
+   * @throws Error if the ticket is not found
+   */
+  getComplaint: async (ticketId: string): Promise<TicketResponse> => {
+    return httpClient.get<TicketResponse>(`/complaints/${ticketId}`);
+  },
 };

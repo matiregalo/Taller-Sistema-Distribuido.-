@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
-import { connectRabbitMQ, closeRabbitMQ } from './messaging/rabbitmq.js';
+import { RabbitMQConnectionManager } from './messaging/RabbitMQConnectionManager.js';
 import { complaintsRouter } from './routes/complaints.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
@@ -42,10 +42,13 @@ app.get('/health', (_req, res) => {
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
+// Singleton connection manager
+const connectionManager = RabbitMQConnectionManager.getInstance();
+
 // Graceful shutdown
 const gracefulShutdown = async (signal: string): Promise<void> => {
   logger.info(`Received ${signal}. Shutting down gracefully...`);
-  await closeRabbitMQ();
+  await connectionManager.close();
   process.exit(0);
 };
 
@@ -55,8 +58,8 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 // Start server
 const startServer = async (): Promise<void> => {
   try {
-    // Connect to RabbitMQ
-    await connectRabbitMQ();
+    // Connect to RabbitMQ via Singleton
+    await connectionManager.connect();
 
     // Start Express server
     app.listen(config.port, () => {

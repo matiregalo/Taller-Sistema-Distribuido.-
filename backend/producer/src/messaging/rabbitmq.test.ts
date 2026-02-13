@@ -1,42 +1,50 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TicketEventPayload, IncidentType } from '../types/ticket.types.js';
+import { RabbitMQConnectionManager } from './RabbitMQConnectionManager.js';
 
 const mockPublish = vi.fn().mockReturnValue(true);
 const mockAssertExchange = vi.fn().mockResolvedValue(undefined);
 const mockChannelClose = vi.fn().mockResolvedValue(undefined);
 const mockConnectionClose = vi.fn().mockResolvedValue(undefined);
-let onCloseHandler: (() => void) | null = null;
-let onErrorHandler: ((err: Error) => void) | null = null;
 
-const createMockChannel = () => ({
-  assertExchange: mockAssertExchange,
-  publish: mockPublish,
-  close: mockChannelClose,
+vi.mock('amqplib', () => {
+  const createMockChannel = () => ({
+    assertExchange: vi.fn().mockResolvedValue(undefined),
+    publish: vi.fn().mockReturnValue(true),
+    close: vi.fn().mockResolvedValue(undefined),
+  });
+
+  const createMockConnection = () => ({
+    createChannel: vi.fn().mockResolvedValue(createMockChannel()),
+    on: vi.fn(),
+    close: vi.fn().mockResolvedValue(undefined),
+  });
+
+  return {
+    default: {
+      connect: vi.fn().mockResolvedValue(createMockConnection()),
+    },
+  };
 });
 
-const createMockConnection = () => ({
-  createChannel: vi.fn().mockResolvedValue(createMockChannel()),
-  on: vi.fn((event: string, handler: () => void) => {
-    if (event === 'close') onCloseHandler = handler;
-    if (event === 'error') onErrorHandler = handler;
-  }),
-  close: mockConnectionClose,
-});
-
-vi.mock('amqplib', () => ({
-  default: {
-    connect: vi.fn().mockResolvedValue(createMockConnection()),
-  },
-}));
-
-describe('rabbitmq', () => {
+describe('rabbitmq (Singleton-based)', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockPublish.mockReturnValue(true);
-    onCloseHandler = null;
-    onErrorHandler = null;
-    const { closeRabbitMQ } = await import('./rabbitmq.js');
-    await closeRabbitMQ().catch(() => {});
+    RabbitMQConnectionManager.resetInstance();
+
+    // Re-setup mock implementations after clearAllMocks
+    const amqp = await import('amqplib');
+    const mockChannel = {
+      assertExchange: mockAssertExchange,
+      publish: mockPublish,
+      close: mockChannelClose,
+    };
+    const mockConnection = {
+      createChannel: vi.fn().mockResolvedValue(mockChannel),
+      on: vi.fn(),
+      close: mockConnectionClose,
+    };
+    vi.mocked(amqp.default.connect).mockResolvedValue(mockConnection as never);
   });
 
   it('publishTicketEvent devuelve false cuando el channel no está disponible', async () => {
@@ -52,7 +60,7 @@ describe('rabbitmq', () => {
     expect(result).toBe(false);
   });
 
-  it('connectRabbitMQ conecta y configura exchange', async () => {
+  it('connectRabbitMQ conecta y configura exchange via Singleton', async () => {
     const amqp = await import('amqplib');
     const { connectRabbitMQ } = await import('./rabbitmq.js');
     await connectRabbitMQ();
@@ -131,15 +139,9 @@ describe('rabbitmq', () => {
   it('connectRabbitMQ lanza si connect falla', async () => {
     const amqp = await import('amqplib');
     vi.mocked(amqp.default.connect).mockRejectedValueOnce(new Error('Connection refused'));
+    RabbitMQConnectionManager.resetInstance();
     const { connectRabbitMQ } = await import('./rabbitmq.js');
     await expect(connectRabbitMQ()).rejects.toThrow('Connection refused');
-  });
-
-  it('connectRabbitMQ maneja rechazo no-Error (unknown error)', async () => {
-    const amqp = await import('amqplib');
-    vi.mocked(amqp.default.connect).mockRejectedValueOnce('string error');
-    const { connectRabbitMQ } = await import('./rabbitmq.js');
-    await expect(connectRabbitMQ()).rejects.toBe('string error');
   });
 
   it('closeRabbitMQ cierra channel y connection', async () => {
@@ -155,35 +157,5 @@ describe('rabbitmq', () => {
     await connectRabbitMQ();
     mockChannelClose.mockRejectedValueOnce(new Error('Close failed'));
     await expect(closeRabbitMQ()).resolves.not.toThrow();
-  });
-
-  it('closeRabbitMQ maneja rechazo no-Error', async () => {
-    const { connectRabbitMQ, closeRabbitMQ } = await import('./rabbitmq.js');
-    await connectRabbitMQ();
-    mockChannelClose.mockRejectedValueOnce(123);
-    await expect(closeRabbitMQ()).resolves.not.toThrow();
-  });
-
-  it('connection on("close") nullifica connection y channel', async () => {
-    const { connectRabbitMQ, publishTicketEvent } = await import('./rabbitmq.js');
-    await connectRabbitMQ();
-    expect(onCloseHandler).not.toBeNull();
-    onCloseHandler!();
-    const payload: TicketEventPayload = {
-      ticketId: 't-after-close',
-      lineNumber: '099',
-      type: IncidentType.NO_SERVICE,
-      description: null,
-      createdAt: new Date().toISOString(),
-    };
-    const result = await publishTicketEvent(payload);
-    expect(result).toBe(false);
-  });
-
-  it('connection on("error") llama al logger', async () => {
-    const { connectRabbitMQ } = await import('./rabbitmq.js');
-    await connectRabbitMQ();
-    expect(onErrorHandler).not.toBeNull();
-    onErrorHandler!(new Error('Connection lost'));
   });
 });

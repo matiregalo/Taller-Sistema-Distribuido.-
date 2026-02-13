@@ -1,43 +1,15 @@
-import amqp, { ChannelModel, Channel } from 'amqplib';
-import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
+import { config } from '../config/index.js';
 import { TicketEventPayload } from '../types/ticket.types.js';
-
-let connection: ChannelModel | null = null;
-let channel: Channel | null = null;
+import { RabbitMQConnectionManager } from './RabbitMQConnectionManager.js';
 
 export const connectRabbitMQ = async (): Promise<void> => {
-  try {
-    logger.info('Connecting to RabbitMQ...', { url: config.rabbitmq.url });
-
-    connection = await amqp.connect(config.rabbitmq.url);
-    channel = await connection.createChannel();
-
-    await channel.assertExchange(config.rabbitmq.exchange, 'topic', {
-      durable: true,
-    });
-
-    logger.info('Connected to RabbitMQ successfully', {
-      exchange: config.rabbitmq.exchange,
-    });
-
-    connection.on('close', () => {
-      logger.warn('RabbitMQ connection closed');
-      connection = null;
-      channel = null;
-    });
-
-    connection.on('error', (err) => {
-      logger.error('RabbitMQ connection error', { error: err.message });
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to connect to RabbitMQ', { error: errorMessage });
-    throw error;
-  }
+  await RabbitMQConnectionManager.getInstance().connect();
 };
 
 export const publishTicketEvent = async (payload: TicketEventPayload): Promise<boolean> => {
+  const channel = RabbitMQConnectionManager.getInstance().getChannel();
+
   if (!channel) {
     logger.error('Cannot publish: RabbitMQ channel not available');
     return false;
@@ -79,17 +51,5 @@ export const publishTicketEvent = async (payload: TicketEventPayload): Promise<b
 };
 
 export const closeRabbitMQ = async (): Promise<void> => {
-  try {
-    if (channel) {
-      await channel.close();
-      logger.debug('RabbitMQ channel closed');
-    }
-    if (connection) {
-      await connection.close();
-      logger.info('RabbitMQ connection closed gracefully');
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error closing RabbitMQ connection', { error: errorMessage });
-  }
+  await RabbitMQConnectionManager.getInstance().close();
 };
