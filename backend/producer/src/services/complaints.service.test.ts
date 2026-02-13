@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { complaintsService } from './complaints.service.js';
 import { complaintsRepository } from '../repositories/complaints.repository.js';
-import * as rabbitmq from '../messaging/rabbitmq.js';
 import { IncidentType } from '../types/ticket.types.js';
 import { ValidationError } from '../errors/validation.error.js';
+import type { IMessagingFacade } from '../messaging/IMessagingFacade.js';
+import { createComplaintsService } from './complaints.service.js';
 
-vi.mock('../messaging/rabbitmq.js', () => ({
-  publishTicketEvent: vi.fn().mockResolvedValue(true),
-}));
+// Mock IMessagingFacade
+const mockMessaging: IMessagingFacade = {
+  publishTicketCreated: vi.fn().mockResolvedValue(undefined),
+};
 
 describe('complaintsService', () => {
   const validRequest = {
@@ -15,6 +16,9 @@ describe('complaintsService', () => {
     email: 'user@example.com',
     incidentType: IncidentType.NO_SERVICE,
   };
+
+  // Create service with injected mock
+  const complaintsService = createComplaintsService(mockMessaging);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -37,15 +41,16 @@ describe('complaintsService', () => {
       expect(ticket.ticketId.length).toBeGreaterThan(0);
     });
 
-    it('publica evento complaint.received (sin lógica de priorización)', async () => {
-      await complaintsService.createTicket(validRequest);
+    it('publica evento via IMessagingFacade (sin lógica de priorización)', async () => {
+      const ticket = await complaintsService.createTicket(validRequest);
 
-      expect(rabbitmq.publishTicketEvent).toHaveBeenCalledTimes(1);
-      const payload = vi.mocked(rabbitmq.publishTicketEvent).mock.calls[0][0];
-      expect(payload).toHaveProperty('ticketId');
-      expect(payload).toHaveProperty('lineNumber', validRequest.lineNumber);
-      expect(payload).toHaveProperty('type', validRequest.incidentType);
-      expect(payload).not.toHaveProperty('priority');
+      expect(mockMessaging.publishTicketCreated).toHaveBeenCalledTimes(1);
+      const publishedTicket = vi.mocked(mockMessaging.publishTicketCreated).mock.calls[0][0];
+      expect(publishedTicket.ticketId).toBe(ticket.ticketId);
+      expect(publishedTicket.lineNumber).toBe(validRequest.lineNumber);
+      expect(publishedTicket.incidentType).toBe(validRequest.incidentType);
+      // Facade receives the full Ticket, not a TicketEventPayload
+      expect(publishedTicket).not.toHaveProperty('priority', expect.stringMatching(/HIGH|MEDIUM|LOW/));
     });
 
     it('rechaza request sin lineNumber', async () => {

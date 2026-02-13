@@ -1,12 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
 import { complaintsRepository } from '../repositories/complaints.repository.js';
-import { publishTicketEvent } from '../messaging/rabbitmq.js';
 import { logger } from '../utils/logger.js';
 import { ValidationError } from '../errors/validation.error.js';
+import { RabbitMQConnectionManager } from '../messaging/RabbitMQConnectionManager.js';
+import { TicketMessageSerializer } from '../messaging/TicketMessageSerializer.js';
+import { MessagingFacade } from '../messaging/MessagingFacade.js';
+import { config } from '../config/index.js';
+import type { IMessagingFacade } from '../messaging/IMessagingFacade.js';
 import {
   Ticket,
   CreateTicketRequest,
-  TicketEventPayload,
   IncidentType,
 } from '../types/ticket.types.js';
 
@@ -49,20 +52,32 @@ const validateCreateRequest = (request: CreateTicketRequest): void => {
   }
 };
 
-export const complaintsService = {
+const buildTicket = (request: CreateTicketRequest): Ticket => ({
+  ticketId: uuidv4(),
+  lineNumber: request.lineNumber,
+  email: request.email,
+  incidentType: request.incidentType as IncidentType,
+  description: request.description || null,
+  status: 'RECEIVED',
+  priority: 'PENDING',
+  createdAt: new Date(),
+});
+
+// Default Facade instance (uses Singleton + Serializer)
+const defaultMessaging: IMessagingFacade = new MessagingFacade(
+  RabbitMQConnectionManager.getInstance(),
+  new TicketMessageSerializer(),
+  { exchange: config.rabbitmq.exchange, routingKey: config.rabbitmq.routingKey }
+);
+
+// Factory function for dependency injection (testability)
+export const createComplaintsService = (
+  messaging: IMessagingFacade = defaultMessaging
+) => ({
   createTicket: async (request: CreateTicketRequest): Promise<Ticket> => {
     validateCreateRequest(request);
 
-    const ticket: Ticket = {
-      ticketId: uuidv4(),
-      lineNumber: request.lineNumber,
-      email: request.email,
-      incidentType: request.incidentType as IncidentType,
-      description: request.description || null,
-      status: 'RECEIVED',
-      priority: 'PENDING',
-      createdAt: new Date(),
-    };
+    const ticket = buildTicket(request);
 
     complaintsRepository.save(ticket);
 
@@ -71,15 +86,8 @@ export const complaintsService = {
       incidentType: ticket.incidentType,
     });
 
-    const eventPayload: TicketEventPayload = {
-      ticketId: ticket.ticketId,
-      lineNumber: ticket.lineNumber,
-      type: ticket.incidentType,
-      description: ticket.description,
-      createdAt: ticket.createdAt.toISOString(),
-    };
-
-    await publishTicketEvent(eventPayload);
+    // Facade: simple and clear — throws MessagingError if it fails
+    await messaging.publishTicketCreated(ticket);
 
     return ticket;
   },
@@ -91,4 +99,7 @@ export const complaintsService = {
 
     return complaintsRepository.findById(ticketId);
   },
-};
+});
+
+// Default instance for backward compatibility
+export const complaintsService = createComplaintsService();
