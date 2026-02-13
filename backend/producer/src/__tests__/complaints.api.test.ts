@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
-import { app } from './app.js';
+import { app } from '../app.js';
 
 // Mock the MessagingFacade to avoid needing RabbitMQ during API tests
-vi.mock('./messaging/MessagingFacade.js', () => ({
+vi.mock('../messaging/MessagingFacade.js', () => ({
   MessagingFacade: vi.fn().mockImplementation(() => ({
     publishTicketCreated: vi.fn().mockResolvedValue(undefined),
   })),
 }));
 
 // Mock the RabbitMQConnectionManager to prevent real connections
-vi.mock('./messaging/RabbitMQConnectionManager.js', () => ({
+vi.mock('../messaging/RabbitMQConnectionManager.js', () => ({
   RabbitMQConnectionManager: {
     getInstance: vi.fn().mockReturnValue({
       connect: vi.fn().mockResolvedValue(undefined),
