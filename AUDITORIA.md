@@ -263,7 +263,67 @@ Sin métricas, tracing ni correlation-id.
 
 ---
 
-## 6. CONCLUSIÓN
+## 6. IDENTIFICACIÓN DE ACIERTOS TÉCNICOS
+
+Este documento resalta los fragmentos de código y decisiones de diseño implementadas en la versión preliminar (MVP) que se alinean con los principios de Clean Code. Estos elementos demuestran una base sólida sobre la cual se construyó la refactorización.
+
+### 6.1 Implementación del Patrón Repository
+Se identificó como un acierto clave la implementación del **Patrón Repository** para la abstracción del acceso a datos, permitiendo desacoplar la lógica de negocio de la persistencia (in-memory en el MVP) y facilitando la transición a una base de datos real en el futuro sin impacto en el dominio.
+
+### 6.2 Nombres Significativos (Meaningful Names)
+
+#### ✅ Definición de Tipos y Enums
+El uso de `Enums` para los tipos de incidentes elimina el uso de "Magic Strings" dispersos por el código. Los nombres de las interfaces son descriptivos y revelan su intención.
+
+- **Archivo:** `ticket.types.ts`
+- **Justificación:** `IncidentType` agrupa todas las variantes posibles bajo un mismo contrato, y `CreateTicketRequest` define claramente qué se espera al crear un ticket.
+
+#### ✅ Constantes Explicativas
+En lugar de tener regex o listas de strings "mágicos" dentro de las funciones, se extrajeron a constantes con nombres claros.
+
+- **Archivo:** `complaints.service.ts`
+- **Justificación:** `VALID_INCIDENT_TYPES` y `EMAIL_REGEX` explican qué son esos valores, mejorando la legibilidad instantánea de la validación.
+
+### 6.3 Funciones (Functions)
+
+#### ✅ Funciones Puras y Pequeñas
+En el Consumer, la lógica para determinar la prioridad se aisló en una función pura que hace una sola cosa.
+
+- **Archivo:** `processor.ts`
+- **Justificación:** `determinePriority` cumple con el principio de responsabilidad única (SRP) a nivel de función. Es fácil de probar (testear) porque no tiene efectos secundarios y su salida depende solo de su entrada.
+
+#### ✅ Validación Extraída
+Aunque la validación estaba dentro del archivo de servicio (algo que se mejoró luego), al menos se extrajo a una función privada `validateCreateRequest` en lugar de ensuciar el método principal `createTicket`.
+
+- **Archivo:** `complaints.service.ts`
+
+### 6.4 Separación de Responsabilidades (MVC)
+
+#### ✅ Controladores "Delgados" (Thin Controllers)
+El controlador actúa puramente como un adaptador HTTP. No contiene lógica de negocio, reglas de validación complejas ni acceso a base de datos. Solo orquesta la petición y la respuesta.
+
+- **Archivo:** `complaints.controller.ts`
+- **Justificación:** Delega todo el trabajo pesado a `complaintsService`. Esto facilita el testing unitario del controlador y del servicio por separado.
+
+### 6.5 Encapsulamiento y Abstracción
+
+#### ✅ Wrapper de Logging
+Se creó una abstracción `logger` en lugar de usar `console.log` directamente en todo el sistema.
+
+- **Archivo:** `logger.ts`
+- **Justificación:** Permite cambiar la implementación del logging (ej: enviar a un archivo o servicio externo) en un solo lugar sin tocar el resto del código. Además, estandariza el formato de salida con timestamps.
+
+### 6.6 Manejo de Errores
+
+#### ✅ Errores Semánticos
+Uso de clases de error personalizadas (`ValidationError`) en lugar de lanzar errores genéricos o devolver strings.
+
+- **Archivo:** `complaints.service.ts`
+- **Justificación:** Permite que capas superiores (como el middleware de error) distingan qué tipo de error ocurrió y decidan qué código HTTP devolver (400 Bad Request vs 500 Internal Error) de forma limpia.
+
+---
+
+## 7. CONCLUSIÓN
 
 El sistema cumple con el MVP funcional bajo arquitectura de microservicios.
 

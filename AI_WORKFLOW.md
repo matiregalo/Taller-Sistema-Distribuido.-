@@ -106,10 +106,26 @@ del aplicativo. Todas las implementaciones deben respetar este protocolo de
 interacción con la IA y quedar reflejadas en el código y la documentación del
 repositorio.
 
+
 ---
 
-## 6. Puerta de Calidad:
+## 6. Puerta de Calidad (Quality Gate) y Protocolo de Prevención
 
-Solicitar a la IA una revisión técnica integral (antes de cada commit) que verifique el cumplimiento de los principios SOLID y Clean Code, la correcta implementación de patrones de diseño y la ausencia de code smells. Asimismo, ejecutar scripts de prueba para verificar el funcionamiento del sistema completo, incluyendo los componentes service, producer, broker, consumer y frontend.
+Antes de realizar cualquier commit (`git commit`), el desarrollador DEBE utilizar la IA para auditar el código generado o modificado. Este paso actúa como una "Puerta de Calidad" obligatoria.
 
+### Protocolo de Verificación Pre-Commit:
 
+1.  **Revisión de SOLID y Clean Code:**
+    *   Solicitar a la IA que analice los archivos modificados en busca de violaciones a los principios SOLID (especialmente SRP y OCP).
+    *   Verificar que no existan *code smells* (funciones largas, anidamiento excesivo, nombres poco claros).
+
+2.  **Verificación de Patrones:**
+    *   Confirmar que la implementación respeta los patrones de diseño definidos (Strategy, Chain of Responsibility, Facade, Singleton, Adapter).
+
+3.  **Ejecución de Pruebas:**
+    *   Solicitar a la IA la generación o ejecución de scripts de prueba (unitarios, integración y E2E) para validar que los cambios no rompen la funcionalidad existente.
+    *   Verificar que la cobertura de pruebas se mantenga o aumente.
+
+4.  **Aprobación:**
+    *   Solo si la IA confirma que el código cumple con los estándares y las pruebas pasan, se procede al commit.
+    *   Si la IA detecta problemas, se debe iterar (refactorizar) y volver a verificar.
