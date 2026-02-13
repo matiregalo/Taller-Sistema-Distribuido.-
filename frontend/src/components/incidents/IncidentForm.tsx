@@ -2,7 +2,7 @@ import { useActionState } from 'react';
 import type { FC } from 'react';
 import { IncidentType, IncidentTypeLabels } from '../../types/incident';
 import type { CreateIncidentRequest } from '../../types/incident';
-import { useIncidentForm } from '../../hooks/useIncidentForm';
+import { useIncidentForm } from '../../hooks';
 import { getFormString, isIncidentType } from '../../utils/typeGuards';
 import SuccessModal from '../modal/SuccessModal';
 
